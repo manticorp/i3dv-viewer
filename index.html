@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        
+        <title>i3dV Viewer</title>
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+		<link rel="shortcut icon" href="favicon.png" />
+        
+        <style>
+            body {
+                height: 100%;
+                margin: 0; 
+                overflow: hidden;
+                padding: 0;
+                width: 100%;
+            }
+            #viewer {
+                width: 100%;
+                height: 100%;
+                min-width: 1px;
+                min-height: 1px;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                position: fixed;
+            }
+        </style>
+        
+        <link href="i3dv.css" rel="stylesheet" type="text/css">
+        <script type="text/javascript" src="i3dv.js" ></script>
+        
+        <script type="text/javascript">
+            var doViewer = function (){
+                var opts = {};
+                // Gets us the base url and the model id.
+                var l = window.location;
+                var baseurl = (typeof(l.origin) !== "undefined") ? l.origin : l.protocol + "//" + l.hostname;
+                baseurl += l.pathname.replace(/%20/g,"").replace(/\s/g,"");
+                
+                var parts = baseurl.split("/");
+                if(parts[parts.length-1] != "viewer")
+                    opts.modelid = parts[parts.length-1];
+
+                // This gets the query string parameters
+                var prmstr = l.search.substr(1);
+                var prmarr = prmstr.replace(/%20/g,"").replace(/\s/g,"").split ("&");
+                
+                var recursiveAdd = function (v, to){
+                    var temp_ob = {};
+                    var prop = v.pop();
+                    if(typeof to === "undefined") {
+                        if(v.length > 0) {
+                            var elem = v.pop();
+                        } else {
+                            return prop;
+                        }
+                        temp_ob[elem] = prop;   
+                    } else  {
+                        temp_ob[prop] = to;
+                    }
+                    if(v.length > 0) return recursiveAdd(v, temp_ob);
+                    return temp_ob;
+                }
+
+                for ( var i = 0; i < prmarr.length; i++) {
+                    var tmparr = prmarr[i].split("=");
+                    var parts = tmparr[0].split("-");
+                    parts.push(tmparr[1]);
+                    var thePart = parts.shift();
+                    var theEquals = recursiveAdd(parts);
+                    opts[thePart] = theEquals;
+                }
+                opts.baseurl = baseurl.substr(0,(baseurl.length-opts.modelid.length));
+                var i3dv = new _i3dv_(opts);
+                var cont = i3dv.init("viewer");
+                if(cont.options.isMax){
+                    cont.max.onclick = function(e){
+                        e.preventDefault();
+                        window.close();
+                        return false;
+                    };
+                } else {
+                    cont.max.onclick = "";
+                    cont.max.href = l;
+                    if(prmstr){
+                        cont.max.href += "&";
+                    } else {
+                        cont.max.href += "?";
+                    }
+                    cont.max.href += "isMax=true";
+                    cont.max.target = "_blank";
+                }
+            }
+        </script>
+		
+    </head>
+    <body onload="doViewer();">
+        <div id="viewer" onload="i3dv.init(this);">
+        </div>
+    <body>
+</html>
