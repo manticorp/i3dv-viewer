@@ -919,7 +919,7 @@ var _i3dv_ = function (options){
             if(this.destroyed) return;
             var p = this.percent();
             this.container.loadingBar.width = this.container.loadingBar.style.width = p + "%";
-            if(this.percent() > 99 || (BrowserDetect.browser == "Chrome" && p > 0 && p == this.i.last.percentloaded)){
+            if(p > 99 || (BrowserDetect.browser == "Chrome" && p > 15 && p == this.i.last.percentloaded)){
                 this.loadComplete();
             }
             this.i.last.percentloaded = p;
