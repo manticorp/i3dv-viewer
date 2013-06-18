@@ -34,6 +34,8 @@ update.
 
 #### Bugs
 
+[Contribute an issue](https://github.com/manticorp/i3dv-viewer/issues)
+
 A bug is a demonstrable problem that is caused by the code in the 
 repository. Good bug reports are extremely helpful - thank you!
 
@@ -60,7 +62,7 @@ help people to fix any potential bugs.
 
 #### Windows
 
-- [x] Chrome - _some issues, won't preload more than ~3mb of video_
+- [x] Chrome - _some issues, won't preload more than ~3mb of video, see [issue #1](https://github.com/manticorp/i3dv-viewer/issues/1)_
 - [x] Safari - _some issues - falls back to image player_
 - [x] Firefox
 - [x] Internet Explorer
