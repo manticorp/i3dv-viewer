@@ -1,8 +1,6 @@
 To Do
 =====
 
-## List
-
 - Test on all browsers
 - Find a solution to the Chrome loading issue
 - Write elegant fallbacks in case of non-display issues
