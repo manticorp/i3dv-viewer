@@ -1,5 +1,6 @@
-i3dv-viewer
+ ![i3dv Logo](https://raw.github.com/manticorp/i3dv-viewer/master/img/logo.png "i3dv Logo") viewer
 ===========
+
 
      _______________    
     |            .. \   _ _____     _                _                        
