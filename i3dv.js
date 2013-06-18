@@ -492,6 +492,9 @@ var _i3dv_ = function (options){
         this.doEvents = function (){
             if(!this.active) return;
             this.hammer = Hammer(this.elem);
+            if(BrowserDetect.browser === "Explorer" && !Hammer.HAS_TOUCHEVENTS && !Hammer.HAS_POINTEREVENTS) {
+                Hammer.plugins.showTouches();
+            }
             var that = this;
             window.addEventListener("resize",function(){
                 that.player.scaler();
