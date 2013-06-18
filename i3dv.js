@@ -1667,9 +1667,11 @@ var _i3dv_ = function (options){
                         that.hideOut(that.max);
                     }, false);
                 }
-                this.instructions.addEventListener("mouseout",function (){
-                    that.fadeOut(that.instructions);
-                }, false);
+                if(this.options["instructions"]){
+                    this.instructions.addEventListener("mouseout",function (){
+                        that.fadeOut(that.instructions);
+                    }, false);
+                }
             }
             this.doneOverlayTimeouts = true;
         }
