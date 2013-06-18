@@ -97,7 +97,7 @@ var _i3dv_ = function (options){
     //  once we're all set up, players will automatically retrieve videos from the CDN. At
     //  the moment, everything is done locally.
     this.default_options = {
-        modelid:        "milosaphrodite",   // The id of the model (the name of the video folder/file and sprite folder.
+        modelid:        "tesseract",        // The id of the model (the name of the video folder/file and sprite folder.
         playertype:     "auto",             // The type of player to use. Setting to "auto" will intelligently decide
                                             //  based on browser capabilities. Available players: "video", "videojs", "image", "canvas".
         quality:        0,                  // The quality, from 1-100. This is a proprietary scale.

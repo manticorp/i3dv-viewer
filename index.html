@@ -79,7 +79,7 @@
                     var theEquals = recursiveAdd(parts);
                     opts[thePart] = theEquals;
                 }
-                opts.baseurl = baseurl.substr(0,(baseurl.length-opts.modelid.length));
+                
                 var i3dv = new _i3dv_(opts);
                 var cont = i3dv.init("viewer");
                 if(cont.options.isMax){
