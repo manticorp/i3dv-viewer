@@ -20,6 +20,7 @@
                 margin: 0; 
                 overflow: hidden;
                 padding: 0;
+                position: absolute;
                 width: 100%;
             }
             #viewer {
@@ -40,20 +41,23 @@
         
         <script type="text/javascript">
             var doViewer = function (){
+                // Initialising the options object.
                 var opts = {};
-                // Gets us the base url and the model id.
-                var l = window.location;
-                var baseurl = (typeof(l.origin) !== "undefined") ? l.origin : l.protocol + "//" + l.hostname;
-                baseurl += l.pathname.replace(/%20/g,"").replace(/\s/g,"");
                 
-                var parts = baseurl.split("/");
-                if(parts[parts.length-1] != "viewer")
-                    opts.modelid = parts[parts.length-1];
+                // If you set an appropriate htaccess rewrite on this path, it will take the last part of the url
+                // and use that as the modelid (e.g. http://i3dv/tesseract).
+                var pathname = window.location.pathname.replace(/%20/g,"").replace(/\s/g,"");
+                while(pathname[pathname.length-1] === "/")pathname = pathname.substr(0,pathname.length-1);
+                var parts = pathname.split("/");
+                if(pathname != "") opts.modelid = parts[parts.length-1];
 
-                // This gets the query string parameters
-                var prmstr = l.search.substr(1);
+                // This gets the query string parameters.
+                var prmstr = window.location.search.substr(1);
                 var prmarr = prmstr.replace(/%20/g,"").replace(/\s/g,"").split ("&");
                 
+                /**
+                 * This takes the array, [v], and adds the last item of it to [to]
+                 */
                 var recursiveAdd = function (v, to){
                     var temp_ob = {};
                     var prop = v.pop();
@@ -70,19 +74,42 @@
                     if(v.length > 0) return recursiveAdd(v, temp_ob);
                     return temp_ob;
                 }
-
+                
+                /**
+                 * This takes each get var and splits it by hyphens to indicate
+                 * depth inside the options object, e.g.:
+                 *
+                 *  opts.start.v.x
+                 *
+                 * would be represented by the GET variable:
+                 *
+                 *  start-v-x
+                 *
+                 */
                 for ( var i = 0; i < prmarr.length; i++) {
+                    // Splits the get var by the equals
                     var tmparr = prmarr[i].split("=");
+                    // Takes the left hand side and splits it by the hyphens
                     var parts = tmparr[0].split("-");
+                    // Pushes the right hand side of the equals onto the end of the parts array
                     parts.push(tmparr[1]);
+                    // So the left most property is shifted off...
                     var thePart = parts.shift();
+                    // and the proper recursively deep option is made...
                     var theEquals = recursiveAdd(parts);
+                    // which is then added to the opts array.
                     opts[thePart] = theEquals;
                 }
                 
+                // Initialises the viewer with [opts]
                 var i3dv = new _i3dv_(opts);
-                var cont = i3dv.init("viewer");
-                if(cont.options.isMax){
+                // We capture to container to do some things to it
+                var cont = i3dv.init(document.body);
+                
+                // Here we just change the behaviour of the maximise button slightly.
+                // Because we're already using a maximised element inside an iframe,
+                // it needs to open a link instead.
+                if(opts.vMaxed === "true"){
                     cont.max.onclick = function(e){
                         e.preventDefault();
                         window.close();
@@ -90,21 +117,18 @@
                     };
                 } else {
                     cont.max.onclick = "";
-                    cont.max.href = l;
+                    cont.max.href = window.location;
                     if(prmstr){
                         cont.max.href += "&";
                     } else {
                         cont.max.href += "?";
                     }
-                    cont.max.href += "isMax=true";
+                    cont.max.href += "vMaxed=true";
                     cont.max.target = "_blank";
                 }
             }
         </script>
-		
     </head>
     <body onload="doViewer();">
-        <div id="viewer" onload="i3dv.init(this);">
-        </div>
     <body>
 </html>

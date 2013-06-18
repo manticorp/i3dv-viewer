@@ -1167,7 +1167,6 @@ var _i3dv_ = function (options){
                 function(){
                     that.viewer_videojs = this;
                     var fn = that.options.baseurl + that.options.modelpath + "videos/" + that.options.modelid + "/" + that.options.modelid + that.v.size + ".";
-                    console.log(that.options);
                     console.log("fn = " + fn + "{mp4/webm}");
                     that.viewer_videojs.src([
                         { type: "video/webm", src: fn + "webm" },
