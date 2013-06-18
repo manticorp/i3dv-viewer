@@ -54,8 +54,7 @@ help people to fix any potential bugs.
 
 ## TODO 
 
-[https://github.com/manticorp/i3dv-viewer/blob/master/TODO.md](See TODO)
-
+[See TODO](https://github.com/manticorp/i3dv-viewer/blob/master/TODO.md)
 
 ## Browsers Tested
 
