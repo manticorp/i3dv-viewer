@@ -34,7 +34,7 @@ update.
 
 #### Bugs
 
-[Contribute an issue](https://github.com/manticorp/i3dv-viewer/issues)
+[Contribute an issue](https://github.com/Exponim/i3dv-viewer/issues)
 
 A bug is a demonstrable problem that is caused by the code in the 
 repository. Good bug reports are extremely helpful - thank you!
@@ -56,7 +56,7 @@ help people to fix any potential bugs.
 
 ## TODO 
 
-[See TODO](https://github.com/manticorp/i3dv-viewer/blob/master/TODO.md)
+[See TODO](https://github.com/Exponim/i3dv-viewer/blob/master/TODO.md)
 
 ## Browsers Tested
 
