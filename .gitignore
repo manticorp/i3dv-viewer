@@ -1,6 +1,6 @@
 /models
-!/models/videos/tesseract/*
-!/models/sprites/tesseract/*
+!/models/tesseract/*
+!/models/tesseract/*
 
 # Packages #
 ############
