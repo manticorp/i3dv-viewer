@@ -964,6 +964,23 @@ so you can upgrade to newer versions easier. You can remove all these styles by 
     margin: 0 auto 7px auto;
 }
 
+.i3dv_no_file {
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    left: 50%;
+    margin-left: -25%;
+    margin-top: -22px;
+    position: absolute;
+    text-align: center;
+    top: 50%;
+    width: 50%;
+}
+
+.i3dv_no_file_title {
+    font-family: "Open Sans", "Helvetica Neue", "Segoe", "Segoe UI", "Calibri", Arial, Helvetica, Verdana, Geneva,  sans-serif;
+}
+
 .i3dv_container_maxed {
     box-sizing: content-box !important;
     width: 100%;
