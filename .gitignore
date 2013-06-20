@@ -1,8 +1,11 @@
 models/*
 !models/tesseract/
 !models/tesseract/STATUS
+<<<<<<< HEAD
 
 favicon.*
+=======
+>>>>>>> 48cd3c23c84f88c10db448606e9d52e86b3ee6d4
 
 # Packages #
 ############
