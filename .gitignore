@@ -1,6 +1,6 @@
-/models
-!/models/tesseract/*
-!/models/tesseract/*
+models/*
+!models/tesseract/
+!models/tesseract/STATUS
 
 # Packages #
 ############

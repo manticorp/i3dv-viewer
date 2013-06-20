@@ -410,10 +410,122 @@ var _i3dv_ = function (options){
             
             // Starts the loading sequence.
             this.doLoading();
-            this.load();
             this.doOverlay();
+            this.load();
             this.doEvents();
+            this.checkModel();
         }
+        
+        /**
+         * This function checks if a model exists.
+         *
+         * This function basically checks for the existance of a STATUS
+         * file in the model directory. If the file or folder doesn't exist
+         * then it calls the modelNotExists function. If it does, then it
+         * passes the contents of the file to the modelExists fuction, which
+         * deals with it appropriately.
+         */
+        this.checkModel = function () {
+            //Create a boolean variable to check for a valid Internet Explorer instance.
+            var xmlhttp = false;
+            //Check if we are using IE.
+            try {
+                //If the Javascript version is greater than 5.
+                xmlhttp = new ActiveXObject("Msxml2.XMLHTTP");
+            } catch (e) {
+                //If not, then use the older active x object.
+                try {
+                    //If we are using Internet Explorer.
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                } catch (E) {
+                    //Else we must be using a non-IE browser.
+                    xmlhttp = false;
+                }
+            }
+            //If we are using a non-IE browser, create a javascript instance of the object.
+            if (!xmlhttp && typeof XMLHttpRequest != 'undefined') {
+                xmlhttp = new XMLHttpRequest();
+            }
+            var fn = this.options.baseurl + this.options.modelpath + this.options.modelid + "/STATUS";
+            xmlhttp.open("GET", fn);
+            var that = this;
+            xmlhttp.onreadystatechange = function (){
+                if(xmlhttp.readyState == 4){
+                    if (xmlhttp.status == 200) {
+                        that.modelExists(xmlhttp.responseText);
+                        return true;
+                    }else if (xmlhttp.status == 404) {
+                        that.modelNotExists();
+                        return false;
+                    }
+                }
+            };
+            xmlhttp.send(null);
+        }
+        
+        /**
+         * This function takes the [status] and does the appropriate 
+         * action depending on the value of [status]
+         *
+         * The status codes accepted by this function are a 3 digit code,
+         * where the first number indicates the status, and, in most cases,
+         * the last two numbers indicate the percentage until completion
+         * of that particular state. For example, during rendering, if there
+         * are 612 total render images to be done, and 153 are complete, then
+         * the status would start with 1, and the last part would be:
+         *
+         *  (612/153)*100 = 25;
+         *
+         * Therefore our code would be 125.
+         *
+         * @param {Int|String} status 3 digit status code. Can be int or string.
+         */
+        this.modelExists = function (status){
+            // Pads with zeros then cuts down to 3 digits.
+            status = status + "00";
+            status = status.substr(0,3);
+            switch(parseInt(status[0])){
+                case 1:
+                    this.modelNotExists("The model is currently being rendered. " + status[1] + status[2] + "% complete.");
+                    return false;
+                    break;
+                case 2:
+                    this.modelNotExists("Initial render complete, but the files are still being transferred. " + status[1] + status[2] + "% complete.");
+                    return false;
+                    break;
+                case 9:
+                default:
+                    return true;
+            }
+        }
+        
+        /**
+         * If the model doesn't exist of isn't ready, this function is called.
+         *
+         * @param {String} [text] optional text to have in the title element. Default is 'The model does not exist, sorry.'.
+         */
+        this.modelNotExists = function (text){
+            this.modelError(text);
+        }
+        
+        /**
+         * This replaces all the innerHTML of our container with a div in a div
+         * with some text inside, indicating the problem.
+         *
+         * @param {String} [text] optional text to have in the title element. Default is 'The model does not exist, sorry.'.
+         */
+        this.modelError = function (text){
+            text = (typeof text === 'undefined') ? 'The model does not exist, sorry.' : text + "";
+            this.container.innerHTML = "";
+            this.noFile = document.createElement('div');
+            this.noFile.classList.add("i3dv_no_file");
+            this.noFileTitle = document.createElement('div');
+            this.noFileTitle.classList.add("i3dv_no_file_title");
+            this.noFileTitle.innerHTML = text;
+            this.noFile.appendChild(this.noFileTitle);
+            this.container.appendChild(this.noFile);
+        }
+        
         
         /**
          * Destroys the viewer and container and everything...this is basically
@@ -691,7 +803,13 @@ var _i3dv_ = function (options){
          */
         this._player.prototype.load = function () {
             console.log("load");     
-        };    
+        };  
+        
+        this._player.prototype.fileNotExist = function (){
+            console.log("_player.fileNotExist");
+            this.container.fileNotExist();
+            this.destroy();
+        }
         
         /**
          * default seek function. not used.
