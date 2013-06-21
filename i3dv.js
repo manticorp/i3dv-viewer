@@ -145,6 +145,7 @@ var _i3dv_ = function (options){
         ads:            true,               // Whether ads appear.
         overlay:        true,               // Whether the overlay is rendered
         baseurl:        "",                 // The base url. When released, this will be the CDN url.
+        renderpath:     "renders/",         // The path to models after the base url
         modelpath:      "models/",          // The path to models after the base url
         imgpath:        "img/",             // The img path to use for skin elements.
         preset:         0                   // The preset values (described below @see below) 
@@ -446,7 +447,7 @@ var _i3dv_ = function (options){
             if (!xmlhttp && typeof XMLHttpRequest != 'undefined') {
                 xmlhttp = new XMLHttpRequest();
             }
-            var fn = this.options.baseurl + this.options.modelpath + this.options.modelid + "/STATUS";
+            var fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/STATUS";
             xmlhttp.open("GET", fn);
             var that = this;
             xmlhttp.onreadystatechange = function (){
@@ -1184,11 +1185,11 @@ var _i3dv_ = function (options){
             this.viewer.classList.add("i3dv_video");
             this.getVideoInfo();
             if(this.v.size !== this.v.last.size){
-                this.v.fn = this.options.baseurl + this.options.modelpath + this.options.modelid + "/videos/" + this.v.size + "." + this.v.type;
+                this.v.fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/" + this.v.size + "." + this.v.type;
                 console.log("fn = " + this.v.fn);
                 this.viewer.src = this.v.fn;
                 this.viewer.setAttribute("preload", "auto");
-                this.viewer.setAttribute("poster",this.options.baseurl + this.options.modelpath + this.options.modelid + "/videos/thumb.jpg");
+                this.viewer.setAttribute("poster",this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg");
                 this.viewer.load();
                 var that = this;
                 if(BrowserDetect.browser == "Chrome" || BrowserDetect.browser == "Safari" || BrowserDetect.browser == "Opera"){
@@ -1244,11 +1245,11 @@ var _i3dv_ = function (options){
             this.vcontext = this.viewer.getContext("2d");
             this.getVideoInfo();
             if(this.v.size !== this.v.last.size){
-                this.v.fn = this.options.baseurl + this.options.modelpath + this.options.modelid + "/videos/" + this.v.size + "." + this.v.type;
+                this.v.fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/" + this.v.size + "." + this.v.type;
                 console.log("fn = " + this.v.fn);
                 this.video.src = this.v.fn;
                 this.video.setAttribute("preload", "auto");
-                this.video.setAttribute("poster",this.options.baseurl + this.options.modelpath + this.options.modelid + "/videos/thumb.jpg");
+                this.video.setAttribute("poster",this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg");
                 this.video.load();
                 if(BrowserDetect.browser == "Chrome" || BrowserDetect.browser == "Safari" || BrowserDetect.browser == "Opera"){
                     this.loadChecker[this.container.elem.id] = setInterval(function (){
@@ -1284,10 +1285,10 @@ var _i3dv_ = function (options){
                     "controls"  : false, 
                     "autoplay"  : false, 
                     "preload"   : "auto",
-                    "poster"    :  this.options.baseurl + this.options.modelpath + this.options.modelid + "/videos/thumb.jpg"}, 
+                    "poster"    :  this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg"}, 
                 function(){
                     that.viewer_videojs = this;
-                    var fn = that.options.baseurl + that.options.modelpath + that.options.modelid + "/videos/" + that.v.size + ".";
+                    var fn = that.options.baseurl + that.options.renderpath + that.options.modelid + "/videos/" + that.v.size + ".";
                     console.log("fn = " + fn + "{mp4/webm}");
                     that.viewer_videojs.src([
                         { type: "video/webm", src: fn + "webm" },
@@ -1332,7 +1333,7 @@ var _i3dv_ = function (options){
             this.getImageInfo();
             if(this.v.size !== this.v.last.size){
                 var row = this.i.row;
-                var fn = this.options.baseurl + this.options.modelpath + this.options.modelid + "/sprites/" + this.v.size + "/sprite-";
+                var fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/sprites/" + this.v.size + "/sprite-";
                 for(var i=0; i < this.options.steps.y; i++){
                     this.imageBuffer[row]        = new Image();
                     this.imageBuffer[row].src    = fn + row + "." + this.v.type;
@@ -1616,7 +1617,7 @@ var _i3dv_ = function (options){
             this.thumbcanvas   = document.createElement("canvas");
             this.context       = this.thumbcanvas.getContext("2d");
             this.thumb         = new Image();
-            this.thumb.src     = this.options.baseurl + this.options.modelpath + this.options.modelid + "/videos/thumb.jpg";
+            this.thumb.src     = this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg";
             var that           = this;
             this.thumb.onload  = function(){
                 that.thumbLoadComplete.call(that);

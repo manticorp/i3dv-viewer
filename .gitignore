@@ -1,7 +1,13 @@
 models/*
+renders/*
 !models/tesseract/
 !models/tesseract/STATUS
 <<<<<<< HEAD
+!renders/tesseract/
+!renders/tesseract/STATUS
+=======
+<<<<<<< HEAD
+>>>>>>> b23ae28e1c6bbe4c3acbc976c2d58a5a724fecd3
 
 favicon.*
 =======
