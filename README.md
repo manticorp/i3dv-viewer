@@ -18,7 +18,7 @@ This is a handy viewer for viewing our i3dv render files. This software
 is provided so that you can provide a hosted solution to viewing renders
 on your site, should you so wish.
 
-You can obtain renders at [i3dv.com](http://i3dv.com) for free. You can then
+You can obtain renders at [i3dv.com](http://i3dv.com) for free (soon). You can then
 either use our embedded player or use this hosted solution.
 
 ### Getting Started
@@ -95,18 +95,19 @@ help people to fix any potential bugs.
 
 ## License
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+This software is free for non commercial use.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
+This software can be used for free by a party if the goal does not involve 
+commercial gain. If it is used for commercial gain, payment is required. If 
+it is used for charity/personal objectives, payment is not required.
 
-You should have received a copy of the GNU General Public License along
-with this program; if not, write to the Free Software Foundation, Inc.,
-51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+You **can not and must not** use this software for any commercial
+purpose whatsoever without the explicit permission of Exponim and/pr i3dv.
+Any commercial use is **absolutely prohibited** unless written permission
+is given by **[Exponim](http://www.exponim.com)** or **[i3dv](http://www.i3dv.com)**.
 
-[http://www.gnu.org/copyleft/gpl.html](http://www.gnu.org/copyleft/gpl.html)
+Anyone is free to edit, use and redistribute this code (for non commercial purposes)
+so long as an attribution is provided and a link to this GitHub repository or
+the [i3dv website](http://i3dv.com) is provided along with the source code.
+
+Changes to the code are **encouraged**, as are contributions and forks/pull requests.
