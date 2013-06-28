@@ -27,10 +27,17 @@ either use our embedded player or use this hosted solution.
 
 ### Contributing
 
+1. Check for [open issues](https://github.com/Exponim/i3dv-viewer/issues) or open a fresh issue to 
+   start a discussion around a feature idea or a bug.
+2. Fork this repository on Github to start making your changes.
+3. Preferably, create a new branch in your cloned repository. If it's related to an issue, then
+   naming it issue#, where # is the issue number, is always a good idea.
+4. Submit a pull request, and we'll merge it into the master branch after testing.
+
 To contribute, fork the project and submit a pull request with detailed 
 information regarding the modification. It would also be *very* helpful
 for you to update any documentation that needs changing because of the
-update.
+update and writing any appropriate tests.
 
 #### Bugs
 
