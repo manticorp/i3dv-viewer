@@ -10,7 +10,9 @@
     `____________'     |_|____/ \__,_| \_/      \_/ |_|\___| \_/\_/ \___|_|   
     
 
-A viewer for i3dv render files
+A viewer for i3dv render files. This allows you to view 3d models in the browser
+without worrying about intellectual property. The viewer doesn't expose access to
+any model files.
 
 ### About
 
@@ -18,7 +20,7 @@ This is a handy viewer for viewing our i3dv render files. This software
 is provided so that you can provide a hosted solution to viewing renders
 on your site, should you so wish.
 
-You can obtain renders at [i3dv.com](http://i3dv.com) for free. You can then
+You can obtain renders at [i3dv.com](http://i3dv.com) for free (soon). You can then
 either use our embedded player or use this hosted solution.
 
 ### Getting Started
@@ -27,10 +29,17 @@ either use our embedded player or use this hosted solution.
 
 ### Contributing
 
+1. Check for [open issues](https://github.com/Exponim/i3dv-viewer/issues) or open a fresh issue to 
+   start a discussion around a feature idea or a bug.
+2. Fork this repository on Github to start making your changes.
+3. Preferably, create a new branch in your cloned repository. If it's related to an issue, then
+   naming it issue#, where # is the issue number, is always a good idea.
+4. Submit a pull request, and we'll merge it into the master branch after testing.
+
 To contribute, fork the project and submit a pull request with detailed 
 information regarding the modification. It would also be *very* helpful
 for you to update any documentation that needs changing because of the
-update.
+update and writing any appropriate tests.
 
 #### Bugs
 
@@ -95,18 +104,19 @@ help people to fix any potential bugs.
 
 ## License
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+This software is free for non commercial use.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
+This software can be used for free by a party if the goal does not involve 
+commercial gain. If it is used for commercial gain, payment is required. If 
+it is used for charity/personal objectives, payment is not required.
 
-You should have received a copy of the GNU General Public License along
-with this program; if not, write to the Free Software Foundation, Inc.,
-51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+You **can not and must not** use this software for any commercial
+purpose whatsoever without the explicit permission of Exponim and/pr i3dv.
+Any commercial use is **absolutely prohibited** unless written permission
+is given by **[Exponim](http://www.exponim.com)** or **[i3dv](http://www.i3dv.com)**.
 
-[http://www.gnu.org/copyleft/gpl.html](http://www.gnu.org/copyleft/gpl.html)
+Anyone is free to edit, use and redistribute this code (for non commercial purposes)
+so long as an attribution is provided and a link to this GitHub repository or
+the [i3dv website](http://i3dv.com) is provided along with the source code.
+
+Changes to the code are **encouraged**, as are contributions and forks/pull requests.
