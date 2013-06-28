@@ -512,7 +512,7 @@ _i3dv_container.prototype.init = function (o) {
     this.load();
     this.doEvents();
     this.checkModel();
-    return this._player;
+    return this.player;
 }
 
 /**
