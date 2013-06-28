@@ -7,7 +7,7 @@
  *    `____________'     |_|____/ \__,_| \_/      \_/ |_|\___| \_/\_/ \___|_|   
  *    
  *      
- * The i3dv viewer is Copyright (C) © 2013 by i3dv and their holding company Exponim.
+ * The i3dv viewer is Copyright (C) ï¿½ 2013 by i3dv and their holding company Exponim.
  *
  * @url         http://www.i3dv.com
  * @email       admin (at) i3dv.com
@@ -233,8 +233,8 @@ var _i3dv_ = function (options){
  * @param {bool} [init] Whether to initiate each container, defaults to true.
  */
 _i3dv_.prototype.init = function (id, init){
-    id = (typeof id === "undefined") ? "i3dv_viewer" : id;
-    init = (typeof init === "undefined") ? true : init;
+    id = (typeof id === "undefined" || id === null) ? "i3dv_viewer" : id;
+    init = (typeof init === "undefined" || id === null) ? true : init;
     var containers = [];
     
     if(typeof id === "string"){
@@ -441,7 +441,10 @@ var _i3dv_container = function (id, o){
 /**
  * Initialises the container. 
  */
-_i3dv_container.prototype.init = function () {
+_i3dv_container.prototype.init = function (o) {
+	if(typeof o !== "undefined"){
+		this.options = _i3dv_.prototype.update(this.options,o);
+	}
     // Destroys the viewer if it is already active (i.e. being re-initialised).
     if(this.active) this.destroy();
     
