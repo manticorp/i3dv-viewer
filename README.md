@@ -10,7 +10,9 @@
     `____________'     |_|____/ \__,_| \_/      \_/ |_|\___| \_/\_/ \___|_|   
     
 
-A viewer for i3dv render files
+A viewer for i3dv render files. This allows you to view 3d models in the browser
+without worrying about intellectual property. The viewer doesn't expose access to
+any model files.
 
 ### About
 
