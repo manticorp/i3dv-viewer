@@ -239,8 +239,18 @@ _i3dv_.prototype.init = function (id, init){
     
     if(typeof id === "string"){
         var conts = document.getElementsByClassName(id);
-        if(conts.length === 0){
-            containers.push(this.addContainer(document.getElementById(id)));
+        if(conts.length === 0 || conts == null){
+            conts = document.getElementById(id);
+            if(conts === null || conts.length === 0){
+                if(id !== "i3dv_viewer"){
+                    throw new Error("element(s) with id/class " + id + " do not exist");
+                } else {
+                    console.log('Nothing to initialise / no containers found...');
+                    return false;
+                }
+            } else {
+                containers.push(this.addContainer(conts));
+            }
         } else {
             for(var i = 0; i < conts.length; i++){
                 containers.push(this.addContainer(conts[i]));
@@ -255,7 +265,11 @@ _i3dv_.prototype.init = function (id, init){
     if(containers.length != 0 && typeof this.containers !== "undefined"){
         if(init) this.prep(containers);
     } else {
-        throw new Error("element(s) with id/class " + id + " do not exist");
+        if(id !== "i3dv_viewer"){
+            throw new Error("element(s) with id/class " + id + " do not exist"); 
+        } else {
+            console.log("Nothing to initialise / no containers found...");
+        }
     }
     if(containers.length === 1){
         return containers[containers.length-1];
@@ -421,10 +435,10 @@ var _i3dv_container = function (id, o){
         // I.e. the user passes us id and we create a container for our player inside it (there are 2 containers,
         // the one that already existed [id or this.container] and the one we create [this.elem])
         this.container = id;
-            this.container.innerHTML = "";
-            while (this.container.firstChild) {
-                this.container.removeChild(this.container.firstChild);
-            }
+        this.container.innerHTML = "";
+        while (this.container.firstChild) {
+            this.container.removeChild(this.container.firstChild);
+        }
         this.elem = document.createElement("div");
         this.container.appendChild(this.elem);
         this.elem.classList.add("i3dv_container");
