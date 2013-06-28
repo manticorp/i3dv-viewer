@@ -289,7 +289,6 @@ _i3dv_.prototype.init = function (id, init){
 _i3dv_.prototype.addContainer = function (elem) {
     var cont = new _i3dv_container(elem,this.options);
     this.containers.push(cont);
-    this.containers[this.containers.length-1].setTabIndex(1);
     return this.containers[this.containers.length-1];
 }
 
@@ -430,25 +429,84 @@ var _i3dv_container = function (id, o){
         // Whether this is currently active.
         this.active = false;
         // Sets id depending on what id is.
-        id = (typeof id === "object") ? id : document.getElementById(id);
-        // Sets the container to the id passed and creates the player container inside the id container.
-        // I.e. the user passes us id and we create a container for our player inside it (there are 2 containers,
-        // the one that already existed [id or this.container] and the one we create [this.elem])
-        this.container = id;
-        this.container.innerHTML = "";
-        while (this.container.firstChild) {
-            this.container.removeChild(this.container.firstChild);
-        }
-        this.elem = document.createElement("div");
-        this.container.appendChild(this.elem);
-        this.elem.classList.add("i3dv_container");
-        this.elem.id = "i3dv_" + Math.floor(Math.random()*1000); 
+        this.id = (typeof id === "object") ? id : document.getElementById(id);
         
         // Whether certain things have been done...just for keeping track of certain things.
         // @todo with most of these there is a better way of telling this.
         this.doneOverlayTimeouts = false;
         this.hasHoveredOverMaximise = false;
         this.hasZoomed = false;
+}
+
+/**
+ * Initialises the container. 
+ */
+_i3dv_container.prototype.init = function () {
+    // Destroys the viewer if it is already active (i.e. being re-initialised).
+    if(this.active) this.destroy();
+    
+    // Sets the container to the id passed and creates the player container inside the id container.
+    // I.e. the user passes us id and we create a container for our player inside it (there are 2 containers,
+    // the one that already existed [id or this.container] and the one we create [this.elem])
+    this.container = this.id;
+    this.container.innerHTML = "";
+    while (this.container.firstChild) {
+        this.container.removeChild(this.container.firstChild);
+    }
+    this.elem = document.createElement("div");
+    this.container.appendChild(this.elem);
+    this.elem.classList.add("i3dv_container");
+    this.elem.id = "i3dv_" + Math.floor(Math.random()*1000);
+    this.setTabIndex(1);
+    
+    // Creates the options variable for the container by cloning the options and
+    // populating the new options with variables from the data tags.
+    this.options = this.checkDataTags(_i3dv_.prototype.clone(this.options), this.container);
+    
+    // Saves the original style (not used)
+    this.originalstyle = this.elem.style;
+    
+    // sets a few mandatory styles (in case of changes to the css)
+    this.elem.style.overflow = "hidden";
+    if(!this.options.isMax)
+        this.elem.style.position = "relative";
+    this.elem.style.outline  = "none";
+
+    // This stops the elastic scrolling on iOS (and other touch ?) devices.
+    this.elem.addEventListener('touchmove',function (e){e.preventDefault();},false);
+    
+    // Changes the background color to the bg option.
+    this.elem.style.backgroundColor = "" + this.options["bg"];
+    
+    // Sets the dynamic cursor.
+    if(this.options["interactive"] && !this.options["nomove"]){
+        var that = this;
+        this.elem.onmousedown = function (e) {
+            this.style.cursor = "url('" + that.options.imgpath + "move_cursor.png'), move";
+        }
+        this.elem.onmouseup = function (e) {
+            this.style.cursor = "default";
+        }
+    }
+    
+    // Finally, this container's state is now *active*
+    this.active = true;
+    
+    // Either gets the thumbnail and changes background based on that, or in the
+    // case of the trans option being true, just sets the background to the bg
+    // variable.
+    if(this.trans){
+        this.elem.style.background = this.options.bg;
+    } else {
+        this.getThumb();
+    }
+    
+    // Starts the loading sequence.
+    this.doLoading();
+    this.doOverlay();
+    this.load();
+    this.doEvents();
+    this.checkModel();
 }
 
 /**
@@ -806,63 +864,6 @@ _i3dv_container.prototype.checkDataTags = function (o, elem, parent) {
         }
     }
     return o;
-}
-
-/**
- * Initialises the container. 
- */
-_i3dv_container.prototype.init = function () {
-    // Destroys the viewer if it is already active (i.e. being re-initialised).
-    if(this.active) this.destroy();
-    
-    // Creates the options variable for the container by cloning the options and
-    // populating the new options with variables from the data tags.
-    this.options = this.checkDataTags(_i3dv_.prototype.clone(this.options), this.container);
-    
-    // Saves the original style (not used)
-    this.originalstyle = this.elem.style;
-    
-    // sets a few mandatory styles (in case of changes to the css)
-    this.elem.style.overflow = "hidden";
-    if(!this.options.isMax)
-        this.elem.style.position = "relative";
-    this.elem.style.outline  = "none";
-
-    // This stops the elastic scrolling on iOS (and other touch ?) devices.
-    this.elem.addEventListener('touchmove',function (e){e.preventDefault();},false);
-    
-    // Changes the background color to the bg option.
-    this.elem.style.backgroundColor = "" + this.options["bg"];
-    
-    // Sets the dynamic cursor.
-    if(this.options["interactive"] && !this.options["nomove"]){
-        var that = this;
-        this.elem.onmousedown = function (e) {
-            this.style.cursor = "url('" + that.options.imgpath + "move_cursor.png'), move";
-        }
-        this.elem.onmouseup = function (e) {
-            this.style.cursor = "default";
-        }
-    }
-    
-    // Finally, this container's state is now *active*
-    this.active = true;
-    
-    // Either gets the thumbnail and changes background based on that, or in the
-    // case of the trans option being true, just sets the background to the bg
-    // variable.
-    if(this.trans){
-        this.elem.style.background = this.options.bg;
-    } else {
-        this.getThumb();
-    }
-    
-    // Starts the loading sequence.
-    this.doLoading();
-    this.doOverlay();
-    this.load();
-    this.doEvents();
-    this.checkModel();
 }
 
 /**
