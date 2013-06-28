@@ -219,1711 +219,76 @@ var _i3dv_ = function (options){
     
     // If the options.init == true, this will initiate straight away.
     if(this.options["init"]) this.init();
-    
-    /**
-     * Creates the container(s). Based on what [id] is given this will either:
-     *  Creates the elements given
-     *  Creates all elements with a given classname
-     *  Creates the element with the given [id] as their id attribute
-     *
-     * Then, depending on whether [init] is set, it initialises them.
-     *
-     * @param {String|DOMelement(s)} [id] Either a Dom element or list of dom elements or a string containing either a class or id. Defaults to "i3dv_viewer"
-     * @param {bool} [init] Whether to initiate each container, defaults to true.
-     */
-    this.init = function (id, init){
-        id = (typeof id === "undefined") ? "i3dv_viewer" : id;
-        init = (typeof init === "undefined") ? true : init;
-        var containers = [];
-        
-        if(typeof id === "string"){
-            var conts = document.getElementsByClassName(id);
-            if(conts.length === 0){
-                containers.push(this.addContainer(document.getElementById(id)));
-            } else {
-                for(var i = 0; i < conts.length; i++){
-                    containers.push(this.addContainer(conts[i]));
-                }
-            }
-        } else if (typeof id === "object"){
-            containers.push(this.addContainer(id));
-        } else {
-            throw new Error("Given element/id not valid.");
-        }
-        
-        if(containers.length != 0 && typeof this.containers !== "undefined"){
-            if(init) this.prep(containers);
-        } else {
-            throw new Error("element(s) with id/class " + id + " do not exist");
-        }
-        if(containers.length === 1){
-            return containers[containers.length-1];
-        } else {
-            return containers;
-        }
-    }
-    
-    /**
-     * Adds a container and sets its tab index
-     *
-     * @param {DOMelement} elem the element to initiate as a container.
-     * @todo Set the tab index the the container contructor (theres no reason for it to be here??)
-     */
-    this.addContainer = function (elem) {
-        var cont = new this._container(elem,this.options);
-        this.containers.push(cont);
-        this.containers[this.containers.length-1].setTabIndex(1);
-        return this.containers[this.containers.length-1];
-    }
-    
-    /**
-     * This initiates the list of containers.
-     *
-     * @param {_container[]} conts An array of _containers
-     */
-    this.prep = function (conts){
-        for(var i = 0; i < conts.length; i++){
-            conts[i].init();
-        }
-    }
-    
-    /**
-     * The container object. This contains all functions and properties of the container, 
-     * including the player objects.
-     *
-     * @param {String|DOMelement} id Either a dom element or the ID of a dom element.
-     * @param {object} o the options to inherit.
-     */
-    this._container = function (id, o){
-        this.options = o;
-        
-        // Whether this is a maximised player.
-        this.isMax = false;
-        // Whether this is currently active.
-        this.active = false;
-        // Sets id depending on what id is.
-        id = (typeof id === "object") ? id : document.getElementById(id);
-        // Sets the container to the id passed and creates the player container inside the id container.
-        // I.e. the user passes us id and we create a container for our player inside it (there are 2 containers,
-        // the one that already existed [id or this.container] and the one we create [this.elem])
-        this.container = id;
-            this.container.innerHTML = "";
-            while (this.container.firstChild) {
-                this.container.removeChild(this.container.firstChild);
-            }
-        this.elem = document.createElement("div");
-        this.container.appendChild(this.elem);
-        this.elem.classList.add("i3dv_container");
-        this.elem.id = "i3dv_" + Math.floor(Math.random()*1000); 
-        
-        // Whether certain things have been done...just for keeping track of certain things.
-        // @todo with most of these there is a better way of telling this.
-        this.doneOverlayTimeouts = false;
-        this.hasHoveredOverMaximise = false;
-        this.hasZoomed = false;
-        
-        /**
-         * Allows to append children to elem by appending to the container object.
-         */
-        this.appendChild = function(e){
-            this.elem.appendChild(e);
-        }
-        
-        /**
-         * This pulls data tags from the containing element and applies them to the provided options.
-         * Sub objects are defined in data tags by hyphens.
-         *
-         * @example
-         * To set the option start.v.x to 5 you would set:
-         *
-         *  data-start-v-x=5
-         *
-         * on your DOM element. It doesn't matter whether you have data-start-v-x="5" as the options
-         * are all typecast depending on the expected type.
-         *
-         * @param {object} o the options to populate
-         * @param {DOM element} elem the DOM element from which to extract data tags
-         * @param {String} [parent] only used for recursion.
-         */
-        this.checkDataTags = function (o, elem, parent) {
-            parent = (typeof parent === "undefined") ? "" : parent;
-            for(var key in o){
-                if(typeof o[key] === "object"){
-                    o[key] = this.checkDataTags(o[key], elem, parent + "-" + key);
-                } else {
-                    if(elem.getAttribute("data" + parent + "-" + key)){
-                        o[key] = _i3dv_.prototype.cast(elem.getAttribute("data" + parent + "-" + key), typeof o[key]);
-                        // console.log(key + " = " + o[key]);
-                    }
-                }
-            }
-            return o;
-        }
-        
-        /**
-         * Initialises the container. 
-         */
-        this.init = function () {
-            // Destroys the viewer if it is already active (i.e. being re-initialised).
-            if(this.active) this.destroy();
-            
-            // Creates the options variable for the container by cloning the options and
-            // populating the new options with variables from the data tags.
-            this.options = this.checkDataTags(_i3dv_.prototype.clone(this.options), this.container);
-            
-            // Saves the original style (not used)
-            this.originalstyle = this.elem.style;
-            
-            // sets a few mandatory styles (in case of changes to the css)
-            this.elem.style.overflow = "hidden";
-            if(!this.options.isMax)
-                this.elem.style.position = "relative";
-            this.elem.style.outline  = "none";
-
-            // This stops the elastic scrolling on iOS (and other touch ?) devices.
-            this.elem.addEventListener('touchmove',function (e){e.preventDefault();},false);
-            
-            // Changes the background color to the bg option.
-            this.elem.style.backgroundColor = "" + this.options["bg"];
-            
-            // Sets the dynamic cursor.
-            if(this.options["interactive"] && !this.options["nomove"]){
-                var that = this;
-                this.elem.onmousedown = function (e) {
-                    this.style.cursor = "url('" + that.options.imgpath + "move_cursor.png'), move";
-                }
-                this.elem.onmouseup = function (e) {
-                    this.style.cursor = "default";
-                }
-            }
-            
-            // Finally, this container's state is now *active*
-            this.active = true;
-            
-            // Either gets the thumbnail and changes background based on that, or in the
-            // case of the trans option being true, just sets the background to the bg
-            // variable.
-            if(this.trans){
-                this.elem.style.background = this.options.bg;
-            } else {
-                this.getThumb();
-            }
-            
-            // Starts the loading sequence.
-            this.doLoading();
-            this.doOverlay();
-            this.load();
-            this.doEvents();
-            this.checkModel();
-        }
-        
-        /**
-         * This function checks if a model exists.
-         *
-         * This function basically checks for the existance of a STATUS
-         * file in the model directory. If the file or folder doesn't exist
-         * then it calls the modelNotExists function. If it does, then it
-         * passes the contents of the file to the modelExists fuction, which
-         * deals with it appropriately.
-         */
-        this.checkModel = function () {
-            //Create a boolean variable to check for a valid Internet Explorer instance.
-            var xmlhttp = false;
-            //Check if we are using IE.
-            try {
-                //If the Javascript version is greater than 5.
-                xmlhttp = new ActiveXObject("Msxml2.XMLHTTP");
-            } catch (e) {
-                //If not, then use the older active x object.
-                try {
-                    //If we are using Internet Explorer.
-                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-                } catch (E) {
-                    //Else we must be using a non-IE browser.
-                    xmlhttp = false;
-                }
-            }
-            //If we are using a non-IE browser, create a javascript instance of the object.
-            if (!xmlhttp && typeof XMLHttpRequest != 'undefined') {
-                xmlhttp = new XMLHttpRequest();
-            }
-            var fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/STATUS";
-            xmlhttp.open("GET", fn);
-            var that = this;
-            xmlhttp.onreadystatechange = function (){
-                if(xmlhttp.readyState == 4){
-                    if (xmlhttp.status == 200) {
-                        that.modelExists(xmlhttp.responseText);
-                        return true;
-                    }else if (xmlhttp.status == 404) {
-                        that.modelNotExists();
-                        return false;
-                    }
-                }
-            };
-            xmlhttp.send(null);
-        }
-        
-        /**
-         * This function takes the [status] and does the appropriate 
-         * action depending on the value of [status]
-         *
-         * The status codes accepted by this function are a 3 digit code,
-         * where the first number indicates the status, and, in most cases,
-         * the last two numbers indicate the percentage until completion
-         * of that particular state. For example, during rendering, if there
-         * are 612 total render images to be done, and 153 are complete, then
-         * the status would start with 1, and the last part would be:
-         *
-         *  (612/153)*100 = 25;
-         *
-         * Therefore our code would be 125.
-         *
-         * @param {Int|String} status 3 digit status code. Can be int or string.
-         */
-        this.modelExists = function (status){
-            // Pads with zeros then cuts down to 3 digits.
-            status = status + "00";
-            status = status.substr(0,3);
-            switch(parseInt(status[0])){
-                case 1:
-                    this.modelNotExists("The model is currently being rendered. " + status[1] + status[2] + "% complete.");
-                    return false;
-                    break;
-                case 2:
-                    this.modelNotExists("Initial render complete, but the files are still being transferred. " + status[1] + status[2] + "% complete.");
-                    return false;
-                    break;
-                case 9:
-                default:
-                    return true;
-            }
-        }
-        
-        /**
-         * If the model doesn't exist of isn't ready, this function is called.
-         *
-         * @param {String} [text] optional text to have in the title element. Default is 'The model does not exist, sorry.'.
-         */
-        this.modelNotExists = function (text){
-            this.modelError(text);
-        }
-        
-        /**
-         * This replaces all the innerHTML of our container with a div in a div
-         * with some text inside, indicating the problem.
-         *
-         * @param {String} [text] optional text to have in the title element. Default is 'The model does not exist, sorry.'.
-         */
-        this.modelError = function (text){
-            text = (typeof text === 'undefined') ? 'The model does not exist, sorry.' : text + "";
-            this.container.innerHTML = "";
-            this.noFile = document.createElement('div');
-            this.noFile.classList.add("i3dv_no_file");
-            this.noFileTitle = document.createElement('div');
-            this.noFileTitle.classList.add("i3dv_no_file_title");
-            this.noFileTitle.innerHTML = text;
-            this.noFile.appendChild(this.noFileTitle);
-            this.container.appendChild(this.noFile);
-        }
-        
-        
-        /**
-         * Destroys the viewer and container and everything...this is basically
-         * only used of the container is re-initialised...
-         */
-        this.destroy = function () {
-            this.active = false;
-            try{ this.player.destroy();
-            } catch (e){}
-            try{ this.elem.removeChild(this.iOC);
-            } catch (e){}
-            try{ this.elem.removeChild(this.loading);
-            } catch (e){}
-            try{ this.elem.removeChild(this.loadingbar);
-            } catch (e){}
-            this.elem.style = this.originalstyle;
-            this.elem.removeEventListener("mousedown");
-            this.elem.style.background = "none";
-            this.elem.style.backgroundColor = "none";
-            this.elem.innerHtml = "";
-            this.container.removeChild(this.elem);
-        }
-        
-        /**
-         * Sets the tab index of the container element. This is needed
-         * to capture keypresses on that element.
-         *
-         * @param {int} [i] the index, default 1
-         */
-        this.setTabIndex = function (i) {
-            i = (typeof i === "undefined") ? 1 : i;
-            this.elem.setAttribute("tabindex", i);
-        }
-        
-        /**
-         * Loads the correct player depending on the playertype and initiates it.
-         */
-        this.load = function () {
-            if(!this.active) return;
-            switch(this.options.playertype) {
-                case "image":
-                    this.player = new this._imagePlayer(this.options,this);
-                    break;
-                case "canvas":
-                    this.player = new this._canvasPlayer(this.options,this);
-                    break;
-                case "videojs":
-                    this.player = new this._videojsPlayer(this.options,this);
-                    break;
-                case "video":
-                    this.player = new this._videoPlayer(this.options,this);
-                    break;
-                case "auto":
-                default:
-                    if(/(iPad|iPhone|iPod)/g.test(navigator.userAgent)) {
-                        this.player = new this._imagePlayer(this.options,this);
-                    } else if (BrowserDetect.browser === "Safari" && BrowserDetect.OS === "Windows"){
-                        this.player = new this._imagePlayer(this.options,this);
-                    } else if(this.options.trans) {
-                        this.player = new this._canvasPlayer(this.options,this);
-                    } else {
-                        this.player = new this._videojsPlayer(this.options,this);
-                    }
-            }
-            this.player.init();
-        }
-        
-        /**
-         * This function sets up the events (drag, move, zoom, etc)
-         * 
-         * It is called in the main script (as it relies on lots of
-         * functions common to each viewer type)
-         *
-         * @requires hammer.js 
-         */
-        this.doEvents = function (){
-            if(!this.active) return;
-            this.hammer = Hammer(this.elem);
-            if(BrowserDetect.browser === "Explorer" && parseInt(BrowserDetect.version) >= 9) {
-                Hammer.plugins.showTouches();
-            }
-            var that = this;
-            window.addEventListener("resize",function(){
-                that.player.scaler();
-            }, false);
-            if(this.options["interactive"]){
-                if(Hammer.HAS_TOUCHEVENTS || Hammer.HAS_POINTEREVENTS) {
-                    if(!this.options["nomove"]) {
-                        this.hammer.on("tap",function(e){
-                            that.player.i.v.x = 0;
-                            that.player.i.v.y = 0;
-                        });
-                    }
-                    if(this.options["zoom"]) {
-                        this.hammer.on("pinch",function(e){
-                            that.player.i.scale = e.gesture.scale;
-                            that.player.scaler();
-                        });
-                    }
-                }
-                
-                if(this.options["zoom"]) {
-                    this.elem.addEventListener('DOMMouseScroll',
-                        function(e){
-                            that.player.zoom(e);
-                        },
-                    false);
-                    this.elem.addEventListener('mousewheel',
-                        function(e){
-                            that.player.zoom(e);
-                        }, 
-                    false);
-                    
-                    this.hammer.on("doubletap",function(e){
-                        if(that.hasZoomed){
-                            that.player.zoomOut(e);
-                            that.player.zoomOut(e);
-                        } else {
-                            that.player.zoomIn(e);
-                            that.player.zoomIn(e);
-                        }
-                        that.hasZoomed = !that.hasZoomed;
-                    });
-                }
-                if(this.options["move"]) {
-                    if(this.options["keys"]){
-                        that.elem.addEventListener('keydown',function(e){
-                            that.player.keypad(e);
-                        }, false);
-                    }
-                    this.hammer.on("drag",      function(e){
-                        that.player.drag(e);
-                    });
-                    this.hammer.on("touch",     function(e){
-                        that.player.start(e);
-                    });
-                    this.hammer.on("release",   function(e){
-                        that.player.stop(e);
-                    });
-                }
-                    
-            }
-        }
-        
-        /**
-         * The main default player function, on which all player types are based.
-         * This sets up some of the common variables and functions.
-         *
-         * @param {object} o the parents options
-         * @param {objcet} c the parent container
-         */
-        this._player = function(o,c) {
-            this.options = o;
-            this.container = c;
-            
-            /**
-             * This i object holds all the information about the viewer. i is for i3dv, and
-             * holds i3dv properties (don't ask why, this is just a legacy thing).
-             * 
-             * Where needed, each option is described in detail with a comment next to it.
-             *
-             * @todo rename options.decayfactor to options.friction and change this friction
-             *  parameter's name to something else, as it is misleading for us physicists.
-             */
-            this.i = {
-                active:         false,                      // Whether the player is active or not yet.
-                firstload:      true,                       // Whether it's the first load or not (players can be loaded multiple times)
-                size:           0,                          // Size of the viewer
-                friction: {                         
-                    x: this.options.friction.x,             // These are the viewer frictions, or rather, how responsive
-                    y: this.options.friction.y              // the viewer is to movement. (this should be renamed and the
-                },                                          // decayfactor should be called friction instead...)
-                dim: Math.min(                              // The minimum container dimension
-                    this.container.elem.clientWidth,        
-                    this.container.elem.clientHeight
-                ),                                          
-                col: this.options.start.col,                // The current column
-                row: this.options.start.row,                // The current row
-                x: this.options.start.col,                  // The position on the x axis
-                y: this.options.start.row,                  // The position on the y axis
-                v: {                                        // The velocity values
-                    x: this.options.start.v.x,              // 
-                    y: this.options.start.v.y,              // 
-                    max: 5                                  // 
-                },                                          // 
-                scale: {                                    // The scale factors (used for zoom)
-                    val:        this.options.start.scale,   //
-                    ratio:      1.2,                        //
-                    min:        0.5,                        //
-                    max:        3                           //
-                },                                          //
-                progress:       0,                          // The current progress
-                percentloaded:  0,                          // The current percent loaded
-                last:{                                      // For storing the last calculated versions of various variables
-                    row:        -1,                         //
-                    col:        -1,                         //
-                    x:          -1,                         //
-                    y:          -1,                         //
-                    size:       -1,                         //
-                    scale:      -1,                         //
-                    percentloaded : -1
-                },                                          //
-                ratio:          0,                          // The ratio between rows and columns.
-                context:        0                           // This just stores the canvas context in various places.
-            };
-            
-            // Holds the render loop variable from requestAnimationFrame
-            this.renderer = false;
-            
-            // this is for the render loop. A simple object for storing times and deltas.
-            this.time = {
-                now: new Date(),
-                prev: new Date(),
-                delta: 0
-            }
-            
-            // whether the player is destroyed or not...
-            this.destroyed = false;
-            
-            // the loadchecker object, one property for each viewer.
-            // @todo I'm sure this doesn't need to be an object...
-            this.loadChecker = {};
-        }
-        
-        /**
-         * the default init function.
-         */
-        this._player.prototype.init = function () {
-            this.load();
-            this.scaler();
-        }
-        
-        /**
-         * The main render loop. To keep things consistent, this only calls the draw
-         * function if the delta between calls is greater than 10ms, otherwise we get
-         * some problems with stuttering and uneven framerates.
-         */
-        this._player.prototype.render = function() {
-            this.time.delta = this.time.now - this.time.prev;
-            if(this.time.delta > 16) {
-                this.draw();
-                this.time.prev = this.time.now;
-            }
-            this.time.now = new Date();
-            this.renderer = requestAnimationFrame(this.render.bind(this))
-        }
-        
-        /**
-         * The default Draw function. Basically just checks the co-ordinates, and if
-         * they are different, it seeks the viewer.
-         */
-        this._player.prototype.draw = function () {
-            this.checkCoords();
-            if(this.i.last.row != this.i.row || this.i.last.col != this.i.col){
-                this.seek();
-                this.i.last.col = this.i.col;
-                this.i.last.row = this.i.row;
-            }
-        };
-        
-        /**
-         * this destroys and removes the viewer and any eventListeners, so that it can be re-initiated.
-         */
-        this._player.prototype.destroy = function () {
-            this.destroyed = true;
-            cancelAnimationFrame(this.renderer);
-            this.viewer.removeEventListener("progress");
-            this.viewer.removeEventListener("ready");
-            try{ this.container.elem.removeChild(this.viewer);
-            } catch (e){}
-        };
-        
-        /**
-         * default load function. not used.
-         */
-        this._player.prototype.load = function () {
-            console.log("load");     
-        };  
-        
-        this._player.prototype.fileNotExist = function (){
-            console.log("_player.fileNotExist");
-            this.container.fileNotExist();
-            this.destroy();
-        }
-        
-        /**
-         * default seek function. not used.
-         */
-        this._player.prototype.seek = function () {
-            console.log("seek");     
-        };  
-        
-        /**
-         * Callback for any errors (only attached to the video players at the moment).
-         */
-        this._player.prototype.error = function (e) {
-            console.log("error");
-            console.log(e);
-            if(typeof e.preventDefault != "undefined") e.preventDefault();
-            this.load();
-        };   
-        
-        /**
-         * Sets the velocities to zero.
-         */
-        this._player.prototype.start = function () {
-            this.i.v.x = this.i.v.y = 0;
-        };
-        
-        /**
-         * Clears the detectStillMouse timeout from the drag event.
-         */
-        this._player.prototype.stop = function () {
-            clearTimeout(this.detectStillMouse);
-        };
-        
-        /**
-         * Zooms in by i.scale.ratio (default 1.2)
-         */
-        this._player.prototype.zoomIn = function () {
-            this.i.scale.val = Math.ceil((this.i.scale.val*this.i.scale.ratio)*5)/5;
-            this.scaler();
-        };
-        
-        /**
-         * Zooms out by i.scale.ratio (default 1.2)
-         */
-        this._player.prototype.zoomOut = function () {
-            this.i.scale.val = Math.floor((this.i.scale.val/this.i.scale.ratio)*5)/5;
-            this.scaler();
-        };
-        
-        /**
-         * Callback for the scroll wheel. Calls zoomIn or Out depending
-         * on whether the user zoomed in or out.
-         */
-        this._player.prototype.zoom = function (e) {
-            if(typeof e.gesture != "undefined"){
-                e.gesture.preventDefault();
-            }
-            e.preventDefault();
-            this.i.v.y = this.i.v.x = 0;
-            var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
-            (delta == 1) ? this.zoomIn(e) : this.zoomOut(e);
-            return false;
-        };
-        
-        /**
-         * This caculates the proper sizes and scales depending on the
-         * container size and the scale values. It also, if friction is
-         * set to "auto", sets the friction value.
-         *
-         * Finally, it calls resize.
-         */
-        this._player.prototype.scaler = function () {
-            if(this.destroyed) return;
-            // Sets the min/max scale
-            this.i.scale.val = Math.min(Math.max(this.i.scale.val,this.i.scale.min),this.i.scale.max);
-            
-            // Gets the minimum container dimension
-            var height  = this.container.elem.clientHeight;
-            var width   = this.container.elem.clientWidth;
-            this.i.dim  = Math.min(width, height);
-            this.i.size = this.i.dim * this.i.scale.val;
-
-            // Sets the frictions accordingly
-            this.i.ratio = this.options.steps.x/(this.options.steps.y*2);
-            var power = 0.47;
-            if(this.options.friction.x === "auto")
-                this.i.friction.x  = (240*(1/this.i.ratio)/Math.pow(this.i.dim,power));
-            if(this.options.friction.y === "auto")
-                this.i.friction.y  = (240*this.i.ratio)/Math.pow(this.i.dim,power);
-            this.resize();
-        };
-        
-        /**
-         * This resizes the actual viewer inside the container and makes
-         * sure that it's still in the center.
-         */
-        this._player.prototype.resize = function () {
-            if(this.destroyed) return;
-            // Change canvas width and height
-            this.viewer.width = 
-            this.viewer.height = this.i.size;
-            this.viewer.style.width = 
-            this.viewer.style.height = this.i.size + "px";
-
-            // Centers the video
-            var mTB = Math.floor((this.container.elem.clientHeight - this.i.size)/2);
-            var mRL = Math.floor((this.container.elem.clientWidth  - this.i.size)/2);
-            this.viewer.style.margin = mTB + "px " + mRL + "px";
-        }
-        
-        /**
-         * This rotates the object according to the velocity.
-         */
-        this._player.prototype.rotate = function () {
-            if(this.destroyed) return;
-            // Max and Min
-            this.i.v.x = ((this.i.v.x > this.i.v.max) ? this.i.v.max : (this.i.v.x < -this.i.v.max) ? -this.i.v.max : this.i.v.x);
-            this.i.v.y = ((this.i.v.y > this.i.v.max) ? this.i.v.max : (this.i.v.y < -this.i.v.max) ? -this.i.v.max : this.i.v.y);
-            
-            // Sets the minimum velocity
-            if(Math.abs(this.i.v.x) < 0.01) this.i.v.x = 0;
-            if(Math.abs(this.i.v.y) < 0.01) this.i.v.y = 0;
-            
-            // Decays the velocity
-            if(this.options.decayfactor && this.options.momentum){
-                var d = 1-(this.options.decayfactor/2500);
-                if(this.i.v.x < 0)
-                    this.i.v.x = (-(Math.pow(Math.abs(this.i.v.x)+1,d)-1));
-                else if(this.i.v.x > 0)
-                    this.i.v.x = Math.pow(Math.abs(this.i.v.x)+1,d)-1;
-                if(this.i.v.y < 0) 
-                    this.i.v.y = (-(Math.pow(Math.abs(this.i.v.y)+1,d)-1));
-                else if(this.i.v.y > 0)
-                    this.i.v.y = Math.pow(Math.abs(this.i.v.y)+1,d)-1;
-            }
-
-            // Add this to this.i.x (taking into account the friction)
-            this.i.x += this.i.v.x*(1/this.i.friction.x);
-            this.i.y += this.i.v.y*(1/this.i.friction.y);
-        };
-        
-        /**
-         * This sets the column and row from a combination of the values of
-         * velocities and co-ordinates.
-         */
-        this._player.prototype.checkCoords = function () {
-            if(this.destroyed) return;
-            if(this.i.v.x || this.i.v.y) this.rotate();
-            if(!this.options.momentum) this.i.v.x = this.i.v.y = 0;
-
-            // Stops negative this.i.x
-            if(this.i.x < 0) this.i.x = this.options.steps.x + this.i.x;
-
-            // Modulo this.i.x for wraparaound
-            this.i.x = this.i.x % this.options.steps.x;
-
-            // this.i.y cannot be greater than steps or less than 0
-            this.i.y = Math.max(Math.min(this.i.y,this.options.steps.y-1),0);
-            
-            // Calculates the Row and Column.
-            this.i.row = Math.floor(Math.max(Math.min(Math.floor( this.i.y ) % (this.options.steps.y),this.options.steps.y-1),0));
-            this.i.col = Math.floor(Math.max(Math.min(Math.floor( this.i.x ) % (this.options.steps.x),this.options.steps.x-1),0));
-        };
-        
-        /**
-         * Callback for the drag event.
-         */
-        this._player.prototype.drag = function (e) {
-            if(this.destroyed) return;
-            clearTimeout(this.detectStillMouse);
-            
-            if(typeof e.gesture != "undefined"){
-                var x =  e.gesture.center.pageX;
-                var y =  e.gesture.center.pageY;
-            } else {
-                var x =  e.x;
-                var y =  e.y;
-            }
-            this.i.v.x = (this.i.last.x - x);
-            this.i.v.y = (this.i.last.y - y);
-            
-            this.i.last.x = x;
-            this.i.last.y = y;
-            
-            this.draw();
-            
-            var that = this;
-            this.detectStillMouse = setTimeout(function(){
-                that.i.v.x = that.i.v.y = 0;
-            }, 50);
-        }
-        
-        /**
-         * The default loadComplete functions. This gets rid of the loading bar,
-         * puts on the overlay (with instructions, ads and maximise button) and
-         * then insets the viewer, doing the background at the same time.
-         *
-         * After all this, it sets the render loop going.
-         */
-        this._player.prototype.loadComplete = function () {
-            if(this.destroyed) return;
-            this.container.fadeOut(this.container.loading);
-            this.container.doOverlayTimeouts();
-            this.container.appendChild(this.viewer);
-            this.doBackground();
-            this.render();
-        }
-        
-        /**
-         * default doBackground function. Not used.
-         */
-        this._player.prototype.doBackground = function () {
-            console.log("doBackground");
-        }
-        
-        /**
-         * This just updates the loading bar and then calls loadComplete when the percentage
-         * loaded is greater than 99%.
-         *
-         * In the case of Chrome, it also checks to see if the percentage is changing. Chrome
-         * has a problem with buffering videos in that it's buffer cache is *very* small (less
-         * than 3mb) hence it needs to be initiated before the video actually finishes loading.
-         * It will store the whole video once it starts playing however, but this does mean there
-         * might be a bit of lag on Chrome.
-         *
-         * @todo Find a better solution for Chrome.
-         */
-        this._player.prototype.progress = function () {
-            if(this.destroyed) return;
-            var p = this.percent();
-            this.container.loadingBar.width = this.container.loadingBar.style.width = p + "%";
-            if(p > 99 || (BrowserDetect.browser == "Chrome" && p > 15 && p == this.i.last.percentloaded)){
-                this.loadComplete();
-            }
-            this.i.last.percentloaded = p;
-        }
-        
-        /**
-         * default function for getting the percentage. Not used.
-         */
-        this._player.prototype.percent = function () {
-            if(this.destroyed) return;
-            return this.i.percentloaded;
-        }
-        
-        /**
-         * Call back for the keypad presses. Basically increments or decrements
-         * the x or y value depending on the key pressed.
-         */
-        this._player.prototype.keypad = function (e){
-            if(this.destroyed) return;
-            var wasThere = false;
-            if(e.keyCode == this.options.keycode.up) {
-                this.i.y++;
-                wasThere = true;
-            } else if(e.keyCode == this.options.keycode.down){
-                this.i.y--;
-                wasThere = true;
-            } else if(e.keyCode == this.options.keycode.left) {
-                this.i.x++;
-                wasThere = true;
-            } else if(e.keyCode == this.options.keycode.right) {
-                this.i.x--;
-                wasThere = true;
-            }
-            if(wasThere) {
-                this.i.v.x = this.i.v.y = 0;
-                if (e.preventDefault)
-                    e.preventDefault();
-                else
-                    e.returnValue = false;
-                this.draw();
-                return false;
-            }
-        }
-        
-        /**
-         * Inherits the default player and gives a v object that stores
-         * all sorts of 'video' information.
-         */
-        this._videoPlayer = function (o, c) {
-            c._player.call(this, o, c);
-            this.v = {
-                size:       0,
-                type:       0,
-                fn:         false,
-                frame:      0,
-                time:       0,
-                fps:        (this.options.vfps/1),
-                last: {     
-                    size:   false,
-                    type:   false,
-                    frame:  0,
-                    time:   0,
-                    fn:     null
-                },          
-                hasBg:      false
-            };
-        }
-        
-        /**
-         * Inherits the videoPlayer
-         */
-        this._videojsPlayer = function (o, c){
-            c._videoPlayer.call(this, o, c);
-        }
-        
-        /**
-         * Inherits the videoPlayer
-         */
-        this._canvasPlayer = function (o, c) {
-            c._videoPlayer.call(this, o, c);
-        }
-        
-        /**
-         * Sets up the image player, inheriting the default player.
-         *
-         * This also creates a v object for holding options, however, not
-         * video specific like above, but very similar.
-         *
-         * This also initiates the image buffer array to hold all the
-         * background images.
-         */
-        this._imagePlayer = function (o, c) {
-            c._player.call(this, o, c);
-            this.v = {
-                size:       0,
-                type:       "jpg",
-                fn:         false,
-                loaded:     0,
-                bg: {
-                    position:   0,
-                    src:        0,
-                },
-                last: {  
-                    size:   false,
-                    type:   false,
-                    fn:     null,   
-                    bg: {
-                        position:   null,
-                        src:        null,
-                    }
-                },          
-                hasBg:      false
-            };
-            this.imageBuffer = new Array(this.options.steps.y);
-        }
-        
-        /**
-         * This creates the 4 basic players.
-         *
-         * canvasPlayer and videojsPlayer inherit from videoPlayer.
-         * videoPlayer and imagePlayer just inherit from the generic player.
-         */
-        this._videoPlayer.prototype     = Object.create( this._player.prototype );
-        this._canvasPlayer.prototype    = Object.create( this._videoPlayer.prototype );
-        this._videojsPlayer.prototype   = Object.create( this._videoPlayer.prototype );
-        this._imagePlayer.prototype     = Object.create( this._player.prototype );
-        
-        /**
-         * This loads the videoplayer. It creates two objects (this.viewer and
-         * this.video) for seperating the video specific things from the viewer
-         * based things.
-         *
-         * This behaviour allows the player to reuse a lot of code later on.
-         * 
-         * This loads the appropriate video and sets up some events for checking the
-         * progress of the video (loading) and whether it is ready or not.
-         */
-        this._videoPlayer.prototype.load = function (){
-            if(this.destroyed) return;
-            this.viewer = this.video = document.createElement("video");
-            this.viewer.classList.add("i3dv_video");
-            this.getVideoInfo();
-            if(this.v.size !== this.v.last.size){
-                this.v.fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/" + this.v.size + "." + this.v.type;
-                console.log("fn = " + this.v.fn);
-                this.viewer.src = this.v.fn;
-                this.viewer.setAttribute("preload", "auto");
-                this.viewer.setAttribute("poster",this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg");
-                this.viewer.load();
-                var that = this;
-                if(BrowserDetect.browser == "Chrome" || BrowserDetect.browser == "Safari" || BrowserDetect.browser == "Opera"){
-                    this.loadChecker[this.container.elem.id] = setInterval(function (){
-                        that.progress.call(that);
-                    }, 200);
-                } else {
-                    this.viewer.addEventListener('progress',function(e){
-                        that.progress.call(that, e);
-                    }, false);
-                }
-                this.v.last.size = this.v.size;
-            }
-        }
-        
-        /**
-         * The main loading function for the Canvas player.
-         *
-         * This creates the video and canvas element and loads the video just like 
-         * with the video player. There is one important difference. This function
-         * sets up the video element with a "seeked" event, so that when the video
-         * has finished seeking, it updates the canvas.
-         *
-         * This is preferable to updating the canvas alongside seeking the player
-         * because otherwise it lags behind by 1 frame. For some reason the event
-         * actually fires too early in Opera and Safari...hence the timeout as well,
-         * just in case...
-         *
-         * @todo Find a way to do without the timeout
-         */
-        this._canvasPlayer.prototype.load = function (){
-            if(this.destroyed) return;
-            this.video = document.createElement("video");
-            var that = this;
-            this.video.addEventListener("seeked",function(){
-                that.vToC();
-                if(BrowserDetect.browser == "Opera" || BrowserDetect.browser == "Safari"){
-                    setTimeout(that.vToC(),1000);
-                }
-            },false);
-            
-            // Un-comment these to *see* the video element that the canvas is being
-            // copied from for debugging purposes.
-            // this.container.elem.appendChild(this.video);
-            // this.video.style.position = "absolute";
-            // this.video.style.top = 0;
-            // this.video.style.left = 0;
-            // this.video.width = this.video.style.width = "70px";
-            // this.video.height = this.video.style.height = "70px";
-            
-            this.viewer = document.createElement("canvas");
-            this.viewer.classList.add("i3dv_video");
-            this.vcontext = this.viewer.getContext("2d");
-            this.getVideoInfo();
-            if(this.v.size !== this.v.last.size){
-                this.v.fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/" + this.v.size + "." + this.v.type;
-                console.log("fn = " + this.v.fn);
-                this.video.src = this.v.fn;
-                this.video.setAttribute("preload", "auto");
-                this.video.setAttribute("poster",this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg");
-                this.video.load();
-                if(BrowserDetect.browser == "Chrome" || BrowserDetect.browser == "Safari" || BrowserDetect.browser == "Opera"){
-                    this.loadChecker[this.container.elem.id] = setInterval(function (){
-                        that.progress.call(that);
-                    }, 200);
-                } else {
-                    this.video.addEventListener('progress',function(e){
-                        that.progress.call(that, e);
-                    }, false);
-                }
-                this.v.last.size = this.v.size;
-            }
-        }
-        
-        /**
-         * This is the main loading function for the videojs player.
-         *
-         * This makes a video element and assigns it to a videojs object
-         * (in this case this.viewer_videojs). It also sets up the progress
-         * and loading events, as well as setting a loadChecker interval
-         * in the cases of Chrome, Safari and Opera...(funnily enough, IE
-         * seems to be the only one that calls "progress" reliably);
-         */
-        this._videojsPlayer.prototype.load = function (){
-            if(this.destroyed) return;
-            this.viewer = this.video = document.createElement("video");
-            this.getVideoInfo();
-            if(this.v.size !== this.v.last.size){
-                var that = this;
-                _V_(this.viewer, {
-                    "width"     : this.i.dim,
-                    "height"    : this.i.dim,
-                    "controls"  : false, 
-                    "autoplay"  : false, 
-                    "preload"   : "auto",
-                    "poster"    :  this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg"}, 
-                function(){
-                    that.viewer_videojs = this;
-                    var fn = that.options.baseurl + that.options.renderpath + that.options.modelid + "/videos/" + that.v.size + ".";
-                    console.log("fn = " + fn + "{mp4/webm}");
-                    that.viewer_videojs.src([
-                        { type: "video/webm", src: fn + "webm" },
-                        { type: "video/mp4", src: fn + "mp4" }
-                    ]);
-                    that.viewer_videojs.load();
-                    if(BrowserDetect.browser == "Chrome" || BrowserDetect.browser == "Safari" || BrowserDetect.browser == "Opera"){
-                        that.loadChecker[that.container.elem.id] = setInterval(function (){
-                            that.progress();
-                        }, 200);
-                    } else {
-                        that.viewer_videojs.on("progress", function(e) {
-                            that.progress();
-                        });
-                        that.viewer_videojs.on("loadedalldata", function(e) {
-                            that.loadComplete();
-                        });
-                    }
-                    that.viewer_videojs.on("error", function(e) {
-                        that.error(e);
-                    });
-                });
-                this.v.last.size = this.v.size;
-            }
-            this.viewer.classList.add("i3dv_video");
-        }
-        
-        /**
-         * The main loading function for the images.
-         *
-         * It creates the viewer element (just a div).
-         *
-         * It populates the imageBuffer object with images and 
-         * starts their loading. It then calls back the imageLoaded
-         * function when each image is finished loading.
-         */
-        this._imagePlayer.prototype.load = function (){
-            if(this.destroyed) return;
-            var that = this;
-            this.viewer = document.createElement("div");
-            this.viewer.classList.add("i3dv_video");
-            this.getImageInfo();
-            if(this.v.size !== this.v.last.size){
-                var row = this.i.row;
-                var fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/sprites/" + this.v.size + "/sprite-";
-                for(var i=0; i < this.options.steps.y; i++){
-                    this.imageBuffer[row]        = new Image();
-                    this.imageBuffer[row].src    = fn + row + "." + this.v.type;
-                    this.imageBuffer[row].id     = this.container.elem.id + "_sprite" + row;
-                    this.imageBuffer[row].onload = function(){
-                        that.imageLoaded(this);
-                    };
-                    row = (row + 1) % this.options.steps.y;
-                }
-                console.log(fn + "i." + this.v.type);
-                this.v.last.size = this.v.size;
-            }
-        }
-        
-        /**
-         * Callback for each image that's loaded in the image player. The
-         * v.loaded variables increases each time, so that it can be used
-         * to work out what percentage of images are loaded (this was the
-         * best way I could think of for working out the percentage loaded
-         * in the case of the image player...).
-         *
-         * This could be integrated into the anonymous function above...
-         */
-        this._imagePlayer.prototype.imageLoaded = function (){
-            this.v.loaded++;
-            this.progress();
-        }
-        
-        /**
-         * Gets the image dimension needed depending on player size or quality setting.
-         */
-        this._imagePlayer.prototype.getImageInfo = function (){
-            // Selects the right size
-            var q = this.options["quality"],
-            v = this.v;
-            if((this.i.dim > 720 && q === 0) || q > 75)
-                v.size = 960;
-            else if((this.i.dim > 460 && q === 0) || q > 50)
-                v.size = 720;
-            else if((this.i.dim > 380 && q === 0) || q > 25)
-                v.size = 460;
-            else 
-                v.size = 380;
-        }
-        
-        /**
-         * This doBackground function basically puts the video on a canvas
-         * and takes the top left pixel colour, making that the background
-         * for the container. This is done as well as the thumbnail because
-         * the video bg is slightly different from the thumbnail bg thanks
-         * to the video compression.
-         */
-        this._videoPlayer.prototype.doBackground = function () {
-            if(this.destroyed) return;
-            if(BrowserDetect.browser === "Safari" && BrowserDetect.OS === "Windows") return;
-            this.container.thumbcanvas.style.height = 
-                this.container.thumbcanvas.style.width  = 
-                this.container.thumbcanvas.height = 
-                this.container.thumbcanvas.width  = 
-                this.viewer.height;
-            this.context = this.container.thumbcanvas.getContext("2d");
-            this.context.drawImage(
-                this.video,
-                0,
-                0,
-                this.container.thumbcanvas.width,
-                this.container.thumbcanvas.height
-            );
-            var data = 
-                this.context.getImageData(
-                    0,
-                    0,
-                    1,
-                    1
-                ).data;
-            var brt = data[0] + data[1] + data[2] ;
-            if(brt === 0 && this.v.hasBg === false){
-                this.v.hasBg = true;
-                var that = this;
-                setTimeout(function(){that.doBackground();},500);
-            } else {
-                this.container.elem.style.backgroundColor = "rgba("+data[0]+","+data[1]+","+data[2]+",1)";
-                this.v.hasBg = true;
-            }
-        }
-        
-        /**
-         * This inherits the standard doBackground function unless trans = true
-         */
-        this._canvasPlayer.prototype.doBackground = function (){
-            if(this.options.trans){
-                this.container.elem.style.backgroundColor = this.options.bg;
-            } else {
-                this.container._videoPlayer.prototype.doBackground.call(this);
-            }
-        }
-        
-        /**
-         * The doBackground function for the image player should do nothing.
-         */
-        this._imagePlayer.prototype.doBackground = function (){
-            return;
-        }
-        
-        /**
-         * This gets info on the video type/size needed.
-         */
-        this._videoPlayer.prototype.getVideoInfo = function (){
-            if(this.destroyed) return;
-            // Checks client playability
-            var c = this.video, 
-            p = "probably", 
-            q = this.options["quality"], 
-            v = this.v,
-            w = "webm";
-            if(c.canPlayType('video/webm; codecs="vpm, yuv420p"') === p){
-                v.type = w;
-            } else if(c.canPlayType('video/webm; codecs="vp8, vorbis"') === p){
-                v.type = w;
-            } else if (c.canPlayType('video/mp4; codecs="avc1.4D401E, mp4a.40.2"') === p){
-                v.type = "mp4";
-            } else {
-                v.type = w;
-            }
-            
-            // Selects the right size
-            if((this.i.dim > 720 && q === 0) || q > 75)
-                v.size = 960;
-            else if((this.i.dim > 360 && q === 0) || q > 50)
-                v.size = 720;
-            else 
-                v.size = 360;
-        }
-        
-        /**
-         * Stops the loadChecker interval as well as inheriting the _player loadComplete method.
-         * 
-         * @see this.container._player.prototype.loadComplete
-         */
-        this._videoPlayer.prototype.loadComplete = function() {
-            this.container._player.prototype.loadComplete.call(this);
-            if(BrowserDetect.browser == "Chrome" || BrowserDetect.browser == "Safari" || BrowserDetect.browser == "Opera")
-                clearInterval(this.loadChecker[this.container.elem.id]);
-        }
-        
-        /**
-         * Resizes the canvas payer and then redraws the video to the canvas.
-         * 
-         * @see this.container._player.prototype.resize
-         */
-        this._canvasPlayer.prototype.resize = function (){
-            this.container._player.prototype.resize.call(this);
-            this.vToC();
-            var that = this;
-            if(BrowserDetect.browser == "Safari"){
-                setTimeout(function(){
-                    that.vToC();
-                }, 1000);
-            }
-        }
-        
-        /**
-         * Resizes image player, setting the background size and then seeking to
-         * redraw the background.
-         * 
-         * @see this.container._player.prototype.resize
-         */
-        this._imagePlayer.prototype.resize = function (){
-            this.container._player.prototype.resize.call(this);
-            this.viewer.style.backgroundSize = "auto " + this.i.size + "px";
-            this.seek(true);
-        }
-        
-        /**
-         * Seeks to the correct time in the video
-         */
-        this._videoPlayer.prototype.seek = function (){
-            if(this.destroyed) return;
-            this.v.frame = ( (this.i.row * this.options.steps.x) + this.i.col );
-            this.v.time = this.v.frame / this.v.fps;
-            if(this.v.time != this.v.last.time && typeof this.v.time !== "undefined"){
-                this.video.currentTime = this.v.time;
-                this.v.last.time = this.v.time;
-            }
-        }
-        
-        /**
-         * Seeks to the correct time in the video
-         */
-        this._videojsPlayer.prototype.seek = function (){
-            if(this.destroyed) return;
-            this.v.frame = ( (this.i.row * this.options.steps.x) + this.i.col );
-            this.v.time = this.v.frame / this.v.fps;
-            if(BrowserDetect.browser == "Explorer") this.v.time += (2/this.v.fps);
-            if(this.v.time != this.v.last.time && typeof this.v.time !== "undefined"){
-                this.viewer_videojs.currentTime(this.v.time);
-                this.v.last.time = this.v.time;
-            }
-        }
-        
-        /**
-         * This is the seek function for the image based player. It moves and changes the background
-         * depending on the column and row we want to look at.
-         */
-        this._imagePlayer.prototype.seek = function (force){
-            force = (typeof force === "undefined") ? false : force;
-            if(this.i.last.row !== this.i.row || force) {
-                this.viewer.style.backgroundImage = "url('" + (this.imageBuffer[this.i.row].src) + "')";
-                this.viewer.style.backgroundPosition = (-this.i.col * this.i.size) + "px 0";
-            } else if(this.i.last.col !== this.i.col) {
-                this.viewer.style.backgroundPosition = (-this.i.col * this.i.size) + "px 0";
-            }
-        }
-        
-        /**
-         * Puts the video on the canvas and does transparency if need be.
-         */
-        this._canvasPlayer.prototype.vToC = function () {
-            this.viewer.getContext("2d").drawImage(this.video,0,0,this.viewer.width,this.viewer.height);
-            if(this.options.trans){
-                this.trans();
-            }
-        }
-        
-        /**
-         * Does a key type transparency on the canvas based on the top left pixel colour.
-         * 
-         * This scans every pixel on the canvas and makes it transparent depending on
-         * whether it's in the range set by transtolerance from the top left pixel colour.
-         * By default this is set to 100.
-         */
-        this._canvasPlayer.prototype.trans = function (){
-            var frame = this.vcontext.getImageData(0,0,this.viewer.width, this.viewer.height);
-            var data = frame.data;
-            var l = data.length,
-            r = data[0],
-            g = data[1],
-            b = data[2];
-            for(var i = 0; i < l; i+=4){
-                diff = Math.abs((data[i] - data[0])) + Math.abs((data[i+1] - data[1])) + Math.abs((data[i+2] - data[2]));
-                if(diff <= this.options.transtolerance/1.5) {
-                    frame.data[i+3] = 0;
-                } else if(diff <= this.options.transtolerance) { 
-                    frame.data[i+3] = 255*((diff/this.options.transtolerance));
-                }
-            }
-            this.vcontext.putImageData(frame,0,0);
-        }
-        
-        /**
-         * These three functions simply return the percent loaded on a scale of 1-100.
-         * 
-         * @return {float} the percentage (between 0 and 100).
-         */
-        this._videoPlayer.prototype.percent = function (){
-            if(this.destroyed) return;
-            this.i.percentloaded = (this.video.duration) ? (this.video.buffered.end(0) / this.video.duration)*100 : 0;
-            return this.i.percentloaded;
-        }
-        
-        this._imagePlayer.prototype.percent = function (){
-            if(this.destroyed) return;
-            this.i.percentloaded = ((this.v.loaded * 100)/ this.options.steps.y);
-            return this.i.percentloaded;
-        }
-        
-        this._videojsPlayer.prototype.percent = function (){
-            if(this.destroyed) return;
-            this.i.percentloaded =(this.viewer_videojs.duration()) ? (this.viewer_videojs.buffered().end(0) / this.viewer_videojs.duration())*100 : 0;
-            return this.i.percentloaded;
-        }
-        
-        /**
-         * Gets the thumbnail in the video folder, for doing the
-         * background colour. Doing this we don't have to wait for the 
-         * whole video/sprite to load before getting the correct
-         * background colour.
-         */
-        this.getThumb = function (){
-            if(!this.active) return;
-            this.thumbcanvas   = document.createElement("canvas");
-            this.context       = this.thumbcanvas.getContext("2d");
-            this.thumb         = new Image();
-            this.thumb.src     = this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg";
-            var that           = this;
-            this.thumb.onload  = function(){
-                that.thumbLoadComplete.call(that);
-            };
-        }
-        
-        /**
-         * Callback for when the thumbnail finishes loading.
-         * This basically just gets the top left pixel and makes
-         * the background that colour.
-         */
-        this.thumbLoadComplete = function (){
-            if(!this.active) return;
-            this.thumbcanvas.style.height = 
-                this.thumbcanvas.style.width =
-                this.thumbcanvas.width =
-                this.thumbcanvas.height = 64;
-            this.context = this.thumbcanvas.getContext("2d");
-            this.context.drawImage(
-                this.thumb,
-                0,
-                0,
-                this.thumbcanvas.width,
-                this.thumbcanvas.height
-            );
-            var data = this.context.getImageData(0,0,1,1).data;
-            if(!this.options.trans)
-                this.elem.style.backgroundColor = "rgba("+data[0]+","+data[1]+","+data[2]+",1)";
-        }
-        
-        /**
-         * This function deals with everything in the overlay. That is:
-         *      
-         *      Instructions
-         *      Advert
-         *      Maximise link
-         *
-         */
-        this.doOverlay = function (){
-            if(!this.active) return;
-            var l = window.location;
-            this.iOC = document.createElement('div');
-            this.iOC.id = this.elem.id + "_overlayContainer";
-            this.iOC.classList.add("i3dv_overlayContainer");
-            this.iOC.style.position = "relative";
-
-            // Sets up the maximise button.
-            if(this.options["maximise"]){
-                this.max = document.createElement('a');
-                this.max.id = this.elem.id + "_maximise";
-                this.max.classList.add("i3dv_maximise");
-                this.max.href   = "javascript:void(0);";
-                var that = this;
-                this.max.onclick = function(e){
-                    e.preventDefault();
-                    that.maximise();
-                    return false;
-                }
-                this.max.target = "_blank";
-                this.iOC.appendChild(this.max);
-                if(Math.min(
-                        this.elem.clientWidth,
-                        this.elem.clientHeight
-                    ) > 380) {
-                    this.max.style.height = "32px";
-                    this.max.style.width  = "32px";
-                    this.max.style.backgroundImage = "url('" + this.options.imgpath + "maximise.png')";
-                } else {
-                    this.max.style.height = "16px";
-                    this.max.style.width  = "16px";
-                    this.max.style.backgroundImage = "url('" + this.options.imgpath + "maximise_small.png')";
-               }
-            }
-
-            /**
-             * Creates the overlay. This includes the instructions and advert.
-             */
-            if(this.options["overlay"]){
-                var that = this
-                if(this.options["ads"]){
-                    this.advert = document.createElement('div');
-                    this.advert.id = this.elem.id + "_advert";
-                    this.advert.classList.add("i3dv_advert");
-                    this.advert.innerHTML  = "<p>This is an overlay that could contain an advertisment. A simple text advert with a link. <a href='#' target='_blank'>Such as this one</a></p>";
-                    
-                    this.closeX = document.createElement('span');
-                    this.closeX.classList.add("i3dv_close-x");
-                    this.closeX.onclick = function (e) {
-                        that.fadeOut(that.advert);
-                    }
-                    this.closeX.style.backgroundImage = "url('" + this.options.imgpath + "x.png')";
-                    
-                    this.advert.appendChild(this.closeX);
-                    this.iOC.appendChild(this.advert);
-                }
-                if(this.options["instructions"]){
-                    this.instructions = document.createElement('div');
-                    this.instructions.id = this.elem.id + "_instructions";
-                    this.instructions.classList.add("i3dv_instructions");
-                    if(this.options["hastouch"]){
-                        if(
-                            Math.min(
-                                this.elem.clientWidth,
-                                this.elem.clientHeight) > 380) {
-                            this.instructions.style.height = "41px";
-                            this.instructions.style.width  = "102px";
-                            this.instructions.style.backgroundImage = "url('" + this.options.imgpath + "instructions_touch.png')";
-                        } else {
-                            this.instructions.style.height = "41px";
-                            this.instructions.style.width  = "102px";
-                            this.instructions.style.backgroundImage = "url('" + this.options.imgpath + "instructions_iphone.png')";
-                        }
-                    } else {
-                        if(
-                            Math.min(
-                                this.elem.clientWidth,
-                                this.elem.clientHeight) > 380) {
-                            this.instructions.style.height = "53px";
-                            this.instructions.style.width  = "166px";
-                            this.instructions.style.backgroundImage = "url('" + this.options.imgpath + "instructions.png')";
-                        } else {
-                            this.instructions.style.height = "36px";
-                            this.instructions.style.width  = "103px";
-                            this.instructions.style.backgroundImage = "url('" + this.options.imgpath + "instructions_small.png')";
-                        }
-                    }
-                    this.iOC.appendChild(this.instructions);
-                }
-            }
-            this.elem.appendChild(this.iOC);
-        }
-        
-        /**
-         * This function sets the fades in and out of the overlay components.
-         * 
-         * This gets called in the viewer once the loading is complete.
-         */
-        this.doOverlayTimeouts = function (){
-            if(!this.active) return;
-            var that = this;
-            if(!this.doneOverlayTimeouts && this.options["overlay"]){
-                setTimeout(function () {
-                    if(that.options["maximise"]){
-                        that.fadeIn(that.max);
-                    }
-                    if(that.options["instructions"]){
-                        that.fadeIn(that.instructions);
-                    }
-                },300);
-                if(this.options["maximise"]){
-                    setTimeout(function () {
-                        if(!that.hasHoveredOverMaximise){
-                            that.hideOut(that.max);
-                        }
-                    },10000);
-                }
-                if(this.options["instructions"]){
-                    setTimeout(function () {
-                        that.fadeOut(that.instructions);
-                    },5000);
-                }
-                if(this.options["maximise"]){
-                    this.max.addEventListener("mouseover",function (){
-                        that.fadeIn(that.max);
-                        that.hasHoveredOverMaximise = true;
-                    }, false);
-                    this.max.addEventListener("mouseout",function (){
-                        that.hideOut(that.max);
-                    }, false);
-                }
-                if(this.options["instructions"]){
-                    this.instructions.addEventListener("mouseout",function (){
-                        that.fadeOut(that.instructions);
-                    }, false);
-                }
-            }
-            this.doneOverlayTimeouts = true;
-        }
-        
-        /**
-         * Creates the loading bar and its containers etc.
-         */
-        this.doLoading = function (){
-            if(!this.active) return;
-            if(this.options["loading"]){
-                this.loading = document.createElement("div");
-                this.loadingBarContainer = document.createElement("div");
-                this.loadingBar = document.createElement("div");
-                this.loadingLink = document.createElement("a");
-                this.loadingGraphic = document.createElement("img");
-                
-                this.loadingLink.src = "http://i3dv.com";
-                this.loadingLink.target = "_blank";
-                
-                this.loadingGraphic.src = this.options.imgpath + "logo-viewer.png";
-                
-                this.loading.classList.add("i3dv_loading_container");
-                this.loadingBarContainer.classList.add("i3dv_loading_bar_container");
-                this.loadingBar.classList.add("i3dv_loading_bar");
-                this.loadingGraphic.classList.add("i3dv_loading_graphic");
-                
-                this.loadingLink.appendChild(this.loadingGraphic);
-                this.loadingBarContainer.appendChild(this.loadingBar);
-                this.loading.appendChild(this.loadingLink);
-                this.loading.appendChild(this.loadingBarContainer);
-                this.appendChild(this.loading);
-            }
-        }  
-        
-        /**
-         * An error callback for the errors.
-         */
-        this.error = function (e){
-            var e = window.event || e; // old IE support
-            e.returnValue = false;
-            type = (typeof e.type == "undefined") ? "no type" : e.type;
-            console.log(type);
-            console.log(e);
-            this.load();
-        }
-        
-        /**
-         * Fades out id (using css classes)
-         *
-         * @param {DOM Element|string} id - either a DOM element or the id of one.
-         */
-        this.fadeOut = function (id){
-            var elem = (typeof id == "object") ? id : document.getElementById(id);
-            elem.classList.remove("i3dv_show");
-            elem.classList.add("i3dv_hide");
-            setTimeout(
-                function Remove() {
-                    elem.classList.remove("i3dv_add");
-                    elem.classList.add("i3dv_remove");
-                },
-            300 );
-        }
-        
-        /**
-         * Hides id (using css classes) - doesn't completely remove.
-         *
-         * @param {DOM Element|string} id - either a DOM element or the id of one.
-         */
-        this.hideOut = function (id){
-            var elem =(typeof id == "object") ? id : document.getElementById(id);
-            if(elem.classList.contains("i3dv_show"))
-                elem.classList.remove("i3dv_show");
-            if(elem.classList.contains("i3dv_remove"))
-                elem.classList.remove("i3dv_remove");
-            elem.classList.add("i3dv_hide");
-        }
-        
-        /**
-         * Fades in id (using css classes).
-         *
-         * @param {DOM Element|string} id - either a DOM element or the id of one.
-         */
-        this.fadeIn = function (id){
-            var elem = (typeof id == "object") ? id : document.getElementById(id);
-            elem.classList.remove("i3dv_remove");
-            elem.classList.add("i3dv_add");
-            setTimeout(
-                function () {
-                    elem.classList.add("i3dv_show");
-                    elem.classList.remove("i3dv_hide");
-                },
-            300 );
-        }
-    }
-    
-    /**
-     * Callback for a click on the maximise button.
-     *
-     * All this actually does is create a div the size of the screen,
-     * puts it in place and makes a viewer out of it.
-     */
-    this._container.prototype.maximise = function () {
-        // Makes sure this isn't the maximised version.
-        if(this.options.isMax === false){
-            // Creating the new element and setting the styles.
-            this.elem_maxed = document.createElement("div");
-            document.body.appendChild(this.elem_maxed);
-            this.elem_maxed.id = this.elem.id + "_maxed";
-            this.elem_maxed.classList.add("i3dv_container_maxed");
-            
-            // Clones the options for the new viewer, with a few changes
-            var o = _i3dv_.prototype.clone(this.options);
-            o.isMax = true;
-            o.loadingtext = "Loading High Resolution Model...";
-            o.start.x = o.start.col = this.player.i.col;
-            o.start.y = o.start.row = this.player.i.row;
-            // create a new _i3dv_ instance.
-            var temp = new _i3dv_(o);
-            var cont = temp.init(this.elem_maxed);
-            var that = this;
-            cont.max.onclick = function (e){
-                e.preventDefault();
-                document.body.removeChild(that.elem_maxed);
-                return false;
-            }
-        } else {
-            document.body.removeChild(this.elem);
-        }
-        return false;
-    }
 };
+    
+/**
+ * Creates the container(s). Based on what [id] is given this will either:
+ *  Creates the elements given
+ *  Creates all elements with a given classname
+ *  Creates the element with the given [id] as their id attribute
+ *
+ * Then, depending on whether [init] is set, it initialises them.
+ *
+ * @param {String|DOMelement(s)} [id] Either a Dom element or list of dom elements or a string containing either a class or id. Defaults to "i3dv_viewer"
+ * @param {bool} [init] Whether to initiate each container, defaults to true.
+ */
+_i3dv_.prototype.init = function (id, init){
+    id = (typeof id === "undefined") ? "i3dv_viewer" : id;
+    init = (typeof init === "undefined") ? true : init;
+    var containers = [];
+    
+    if(typeof id === "string"){
+        var conts = document.getElementsByClassName(id);
+        if(conts.length === 0){
+            containers.push(this.addContainer(document.getElementById(id)));
+        } else {
+            for(var i = 0; i < conts.length; i++){
+                containers.push(this.addContainer(conts[i]));
+            }
+        }
+    } else if (typeof id === "object"){
+        containers.push(this.addContainer(id));
+    } else {
+        throw new Error("Given element/id not valid.");
+    }
+    
+    if(containers.length != 0 && typeof this.containers !== "undefined"){
+        if(init) this.prep(containers);
+    } else {
+        throw new Error("element(s) with id/class " + id + " do not exist");
+    }
+    if(containers.length === 1){
+        return containers[containers.length-1];
+    } else {
+        return containers;
+    }
+}
+
+
+    
+/**
+ * Adds a container and sets its tab index
+ *
+ * @param {DOMelement} elem the element to initiate as a container.
+ * @todo Set the tab index the the container contructor (theres no reason for it to be here??)
+ */
+_i3dv_.prototype.addContainer = function (elem) {
+    var cont = new _i3dv_container(elem,this.options);
+    this.containers.push(cont);
+    this.containers[this.containers.length-1].setTabIndex(1);
+    return this.containers[this.containers.length-1];
+}
+
+/**
+ * This initiates the list of containers.
+ *
+ * @param {_container[]} conts An array of _containers
+ */
+_i3dv_.prototype.prep = function (conts){
+    for(var i = 0; i < conts.length; i++){
+        conts[i].init();
+    }
+}
 
 /**
  * Casts variable x to type.
@@ -2035,4 +400,1642 @@ _i3dv_.prototype.clone = function(o) {
         } else newObj[i] = o[i]
     }
     return newObj;
+}
+
+/**
+ * The container object. This contains all functions and properties of the container, 
+ * including the player objects.
+ *
+ * @param {String|DOMelement} id Either a dom element or the ID of a dom element.
+ * @param {object} o the options to inherit.
+ */
+var _i3dv_container = function (id, o){
+        this.options = o;
+        // Whether this is a maximised player.
+        this.isMax = false;
+        // Whether this is currently active.
+        this.active = false;
+        // Sets id depending on what id is.
+        id = (typeof id === "object") ? id : document.getElementById(id);
+        // Sets the container to the id passed and creates the player container inside the id container.
+        // I.e. the user passes us id and we create a container for our player inside it (there are 2 containers,
+        // the one that already existed [id or this.container] and the one we create [this.elem])
+        this.container = id;
+            this.container.innerHTML = "";
+            while (this.container.firstChild) {
+                this.container.removeChild(this.container.firstChild);
+            }
+        this.elem = document.createElement("div");
+        this.container.appendChild(this.elem);
+        this.elem.classList.add("i3dv_container");
+        this.elem.id = "i3dv_" + Math.floor(Math.random()*1000); 
+        
+        // Whether certain things have been done...just for keeping track of certain things.
+        // @todo with most of these there is a better way of telling this.
+        this.doneOverlayTimeouts = false;
+        this.hasHoveredOverMaximise = false;
+        this.hasZoomed = false;
+}
+
+/**
+ * Callback for a click on the maximise button.
+ *
+ * All this actually does is create a div the size of the screen,
+ * puts it in place and makes a viewer out of it.
+ */
+_i3dv_container.prototype.maximise = function () {
+    // Makes sure this isn't the maximised version.
+    if(this.options.isMax === false){
+        // Creating the new element and setting the styles.
+        this.elem_maxed = document.createElement("div");
+        document.body.appendChild(this.elem_maxed);
+        this.elem_maxed.id = this.elem.id + "_maxed";
+        this.elem_maxed.classList.add("i3dv_container_maxed");
+        
+        // Clones the options for the new viewer, with a few changes
+        var o = _i3dv_.prototype.clone(this.options);
+        o.isMax = true;
+        o.loadingtext = "Loading High Resolution Model...";
+        o.start.x = o.start.col = this.player.i.col;
+        o.start.y = o.start.row = this.player.i.row;
+        // create a new _i3dv_ instance.
+        var temp = new _i3dv_(o);
+        var cont = temp.init(this.elem_maxed);
+        var that = this;
+        cont.max.onclick = function (e){
+            e.preventDefault();
+            document.body.removeChild(that.elem_maxed);
+            return false;
+        }
+    } else {
+        document.body.removeChild(this.elem);
+    }
+    return false;
+}
+
+/**
+ * Gets the thumbnail in the video folder, for doing the
+ * background colour. Doing this we don't have to wait for the 
+ * whole video/sprite to load before getting the correct
+ * background colour.
+ */
+_i3dv_container.prototype.getThumb = function (){
+    if(!this.active) return;
+    this.thumbcanvas   = document.createElement("canvas");
+    this.context       = this.thumbcanvas.getContext("2d");
+    this.thumb         = new Image();
+    this.thumb.src     = this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg";
+    var that           = this;
+    this.thumb.onload  = function(){
+        that.thumbLoadComplete.call(that);
+    };
+}
+
+/**
+ * Callback for when the thumbnail finishes loading.
+ * This basically just gets the top left pixel and makes
+ * the background that colour.
+ */
+_i3dv_container.prototype.thumbLoadComplete = function (){
+    if(!this.active) return;
+    this.thumbcanvas.style.height = 
+        this.thumbcanvas.style.width =
+        this.thumbcanvas.width =
+        this.thumbcanvas.height = 64;
+    this.context = this.thumbcanvas.getContext("2d");
+    this.context.drawImage(
+        this.thumb,
+        0,
+        0,
+        this.thumbcanvas.width,
+        this.thumbcanvas.height
+    );
+    var data = this.context.getImageData(0,0,1,1).data;
+    if(!this.options.trans)
+        this.elem.style.backgroundColor = "rgba("+data[0]+","+data[1]+","+data[2]+",1)";
+}
+
+/**
+ * This function deals with everything in the overlay. That is:
+ *      
+ *      Instructions
+ *      Advert
+ *      Maximise link
+ *
+ */
+_i3dv_container.prototype.doOverlay = function (){
+    if(!this.active) return;
+    var l = window.location;
+    this.iOC = document.createElement('div');
+    this.iOC.id = this.elem.id + "_overlayContainer";
+    this.iOC.classList.add("i3dv_overlayContainer");
+    this.iOC.style.position = "relative";
+
+    // Sets up the maximise button.
+    if(this.options["maximise"]){
+        this.max = document.createElement('a');
+        this.max.id = this.elem.id + "_maximise";
+        this.max.classList.add("i3dv_maximise");
+        this.max.href   = "javascript:void(0);";
+        var that = this;
+        this.max.onclick = function(e){
+            e.preventDefault();
+            that.maximise();
+            return false;
+        }
+        this.max.target = "_blank";
+        this.iOC.appendChild(this.max);
+        if(Math.min(
+                this.elem.clientWidth,
+                this.elem.clientHeight
+            ) > 380) {
+            this.max.style.height = "32px";
+            this.max.style.width  = "32px";
+            this.max.style.backgroundImage = "url('" + this.options.imgpath + "maximise.png')";
+        } else {
+            this.max.style.height = "16px";
+            this.max.style.width  = "16px";
+            this.max.style.backgroundImage = "url('" + this.options.imgpath + "maximise_small.png')";
+       }
+    }
+
+    /**
+     * Creates the overlay. This includes the instructions and advert.
+     */
+    if(this.options["overlay"]){
+        var that = this
+        if(this.options["ads"]){
+            this.advert = document.createElement('div');
+            this.advert.id = this.elem.id + "_advert";
+            this.advert.classList.add("i3dv_advert");
+            this.advert.innerHTML  = "<p>This is an overlay that could contain an advertisment. A simple text advert with a link. <a href='#' target='_blank'>Such as this one</a></p>";
+            
+            this.closeX = document.createElement('span');
+            this.closeX.classList.add("i3dv_close-x");
+            this.closeX.onclick = function (e) {
+                that.fadeOut(that.advert);
+            }
+            this.closeX.style.backgroundImage = "url('" + this.options.imgpath + "x.png')";
+            
+            this.advert.appendChild(this.closeX);
+            this.iOC.appendChild(this.advert);
+        }
+        if(this.options["instructions"]){
+            this.instructions = document.createElement('div');
+            this.instructions.id = this.elem.id + "_instructions";
+            this.instructions.classList.add("i3dv_instructions");
+            if(this.options["hastouch"]){
+                if(
+                    Math.min(
+                        this.elem.clientWidth,
+                        this.elem.clientHeight) > 380) {
+                    this.instructions.style.height = "41px";
+                    this.instructions.style.width  = "102px";
+                    this.instructions.style.backgroundImage = "url('" + this.options.imgpath + "instructions_touch.png')";
+                } else {
+                    this.instructions.style.height = "41px";
+                    this.instructions.style.width  = "102px";
+                    this.instructions.style.backgroundImage = "url('" + this.options.imgpath + "instructions_iphone.png')";
+                }
+            } else {
+                if(
+                    Math.min(
+                        this.elem.clientWidth,
+                        this.elem.clientHeight) > 380) {
+                    this.instructions.style.height = "53px";
+                    this.instructions.style.width  = "166px";
+                    this.instructions.style.backgroundImage = "url('" + this.options.imgpath + "instructions.png')";
+                } else {
+                    this.instructions.style.height = "36px";
+                    this.instructions.style.width  = "103px";
+                    this.instructions.style.backgroundImage = "url('" + this.options.imgpath + "instructions_small.png')";
+                }
+            }
+            this.iOC.appendChild(this.instructions);
+        }
+    }
+    this.elem.appendChild(this.iOC);
+}
+   
+/**
+ * This function sets the fades in and out of the overlay components.
+ * 
+ * This gets called in the viewer once the loading is complete.
+ */
+_i3dv_container.prototype.doOverlayTimeouts = function (){
+    if(!this.active) return;
+    var that = this;
+    if(!this.doneOverlayTimeouts && this.options["overlay"]){
+        setTimeout(function () {
+            if(that.options["maximise"]){
+                that.fadeIn(that.max);
+            }
+            if(that.options["instructions"]){
+                that.fadeIn(that.instructions);
+            }
+        },300);
+        if(this.options["maximise"]){
+            setTimeout(function () {
+                if(!that.hasHoveredOverMaximise){
+                    that.hideOut(that.max);
+                }
+            },10000);
+        }
+        if(this.options["instructions"]){
+            setTimeout(function () {
+                that.fadeOut(that.instructions);
+            },5000);
+        }
+        if(this.options["maximise"]){
+            this.max.addEventListener("mouseover",function (){
+                that.fadeIn(that.max);
+                that.hasHoveredOverMaximise = true;
+            }, false);
+            this.max.addEventListener("mouseout",function (){
+                that.hideOut(that.max);
+            }, false);
+        }
+        if(this.options["instructions"]){
+            this.instructions.addEventListener("mouseout",function (){
+                that.fadeOut(that.instructions);
+            }, false);
+        }
+    }
+    this.doneOverlayTimeouts = true;
+}
+
+/**
+ * Creates the loading bar and its containers etc.
+ */
+_i3dv_container.prototype.doLoading = function (){
+    if(!this.active) return;
+    if(this.options["loading"]){
+        this.loading = document.createElement("div");
+        this.loadingBarContainer = document.createElement("div");
+        this.loadingBar = document.createElement("div");
+        this.loadingLink = document.createElement("a");
+        this.loadingGraphic = document.createElement("img");
+        
+        this.loadingLink.src = "http://i3dv.com";
+        this.loadingLink.target = "_blank";
+        
+        this.loadingGraphic.src = this.options.imgpath + "logo-viewer.png";
+        
+        this.loading.classList.add("i3dv_loading_container");
+        this.loadingBarContainer.classList.add("i3dv_loading_bar_container");
+        this.loadingBar.classList.add("i3dv_loading_bar");
+        this.loadingGraphic.classList.add("i3dv_loading_graphic");
+        
+        this.loadingLink.appendChild(this.loadingGraphic);
+        this.loadingBarContainer.appendChild(this.loadingBar);
+        this.loading.appendChild(this.loadingLink);
+        this.loading.appendChild(this.loadingBarContainer);
+        this.appendChild(this.loading);
+    }
+}  
+
+/**
+ * An error callback for the errors.
+ */
+_i3dv_container.prototype.error = function (e){
+    var e = window.event || e; // old IE support
+    e.returnValue = false;
+    type = (typeof e.type == "undefined") ? "no type" : e.type;
+    console.log(type);
+    console.log(e);
+    this.load();
+}
+
+/**
+ * Fades out id (using css classes)
+ *
+ * @param {DOM Element|string} id - either a DOM element or the id of one.
+ */
+_i3dv_container.prototype.fadeOut = function (id){
+    var elem = (typeof id == "object") ? id : document.getElementById(id);
+    elem.classList.remove("i3dv_show");
+    elem.classList.add("i3dv_hide");
+    setTimeout(
+        function Remove() {
+            elem.classList.remove("i3dv_add");
+            elem.classList.add("i3dv_remove");
+        },
+    300 );
+}
+
+/**
+ * Hides id (using css classes) - doesn't completely remove.
+ *
+ * @param {DOM Element|string} id - either a DOM element or the id of one.
+ */
+_i3dv_container.prototype.hideOut = function (id){
+    var elem =(typeof id == "object") ? id : document.getElementById(id);
+    if(elem.classList.contains("i3dv_show"))
+        elem.classList.remove("i3dv_show");
+    if(elem.classList.contains("i3dv_remove"))
+        elem.classList.remove("i3dv_remove");
+    elem.classList.add("i3dv_hide");
+}
+
+/**
+ * Fades in id (using css classes).
+ *
+ * @param {DOM Element|string} id - either a DOM element or the id of one.
+ */
+_i3dv_container.prototype.fadeIn = function (id){
+    var elem = (typeof id == "object") ? id : document.getElementById(id);
+    elem.classList.remove("i3dv_remove");
+    elem.classList.add("i3dv_add");
+    setTimeout(
+        function () {
+            elem.classList.add("i3dv_show");
+            elem.classList.remove("i3dv_hide");
+        },
+    300 );
+}
+
+
+
+/**
+ * Allows to append children to elem by appending to the container object.
+ */
+_i3dv_container.prototype.appendChild = function(e){
+    this.elem.appendChild(e);
+}
+
+/**
+ * This pulls data tags from the containing element and applies them to the provided options.
+ * Sub objects are defined in data tags by hyphens.
+ *
+ * @example
+ * To set the option start.v.x to 5 you would set:
+ *
+ *  data-start-v-x=5
+ *
+ * on your DOM element. It doesn't matter whether you have data-start-v-x="5" as the options
+ * are all typecast depending on the expected type.
+ *
+ * @param {object} o the options to populate
+ * @param {DOM element} elem the DOM element from which to extract data tags
+ * @param {String} [parent] only used for recursion.
+ */
+_i3dv_container.prototype.checkDataTags = function (o, elem, parent) {
+    parent = (typeof parent === "undefined") ? "" : parent;
+    for(var key in o){
+        if(typeof o[key] === "object"){
+            o[key] = this.checkDataTags(o[key], elem, parent + "-" + key);
+        } else {
+            if(elem.getAttribute("data" + parent + "-" + key)){
+                o[key] = _i3dv_.prototype.cast(elem.getAttribute("data" + parent + "-" + key), typeof o[key]);
+                // console.log(key + " = " + o[key]);
+            }
+        }
+    }
+    return o;
+}
+
+/**
+ * Initialises the container. 
+ */
+_i3dv_container.prototype.init = function () {
+    // Destroys the viewer if it is already active (i.e. being re-initialised).
+    if(this.active) this.destroy();
+    
+    // Creates the options variable for the container by cloning the options and
+    // populating the new options with variables from the data tags.
+    this.options = this.checkDataTags(_i3dv_.prototype.clone(this.options), this.container);
+    
+    // Saves the original style (not used)
+    this.originalstyle = this.elem.style;
+    
+    // sets a few mandatory styles (in case of changes to the css)
+    this.elem.style.overflow = "hidden";
+    if(!this.options.isMax)
+        this.elem.style.position = "relative";
+    this.elem.style.outline  = "none";
+
+    // This stops the elastic scrolling on iOS (and other touch ?) devices.
+    this.elem.addEventListener('touchmove',function (e){e.preventDefault();},false);
+    
+    // Changes the background color to the bg option.
+    this.elem.style.backgroundColor = "" + this.options["bg"];
+    
+    // Sets the dynamic cursor.
+    if(this.options["interactive"] && !this.options["nomove"]){
+        var that = this;
+        this.elem.onmousedown = function (e) {
+            this.style.cursor = "url('" + that.options.imgpath + "move_cursor.png'), move";
+        }
+        this.elem.onmouseup = function (e) {
+            this.style.cursor = "default";
+        }
+    }
+    
+    // Finally, this container's state is now *active*
+    this.active = true;
+    
+    // Either gets the thumbnail and changes background based on that, or in the
+    // case of the trans option being true, just sets the background to the bg
+    // variable.
+    if(this.trans){
+        this.elem.style.background = this.options.bg;
+    } else {
+        this.getThumb();
+    }
+    
+    // Starts the loading sequence.
+    this.doLoading();
+    this.doOverlay();
+    this.load();
+    this.doEvents();
+    this.checkModel();
+}
+
+/**
+ * This function checks if a model exists.
+ *
+ * This function basically checks for the existance of a STATUS
+ * file in the model directory. If the file or folder doesn't exist
+ * then it calls the modelNotExists function. If it does, then it
+ * passes the contents of the file to the modelExists fuction, which
+ * deals with it appropriately.
+ */
+_i3dv_container.prototype.checkModel = function () {
+    //Create a boolean variable to check for a valid Internet Explorer instance.
+    var xmlhttp = false;
+    //Check if we are using IE.
+    try {
+        //If the Javascript version is greater than 5.
+        xmlhttp = new ActiveXObject("Msxml2.XMLHTTP");
+    } catch (e) {
+        //If not, then use the older active x object.
+        try {
+            //If we are using Internet Explorer.
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        } catch (E) {
+            //Else we must be using a non-IE browser.
+            xmlhttp = false;
+        }
+    }
+    //If we are using a non-IE browser, create a javascript instance of the object.
+    if (!xmlhttp && typeof XMLHttpRequest != 'undefined') {
+        xmlhttp = new XMLHttpRequest();
+    }
+    var fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/STATUS";
+    xmlhttp.open("GET", fn);
+    var that = this;
+    xmlhttp.onreadystatechange = function (){
+        if(xmlhttp.readyState == 4){
+            if (xmlhttp.status == 200) {
+                that.modelExists(xmlhttp.responseText);
+                return true;
+            }else if (xmlhttp.status == 404) {
+                that.modelNotExists();
+                return false;
+            }
+        }
+    };
+    xmlhttp.send(null);
+}
+
+/**
+ * This function takes the [status] and does the appropriate 
+ * action depending on the value of [status]
+ *
+ * The status codes accepted by this function are a 3 digit code,
+ * where the first number indicates the status, and, in most cases,
+ * the last two numbers indicate the percentage until completion
+ * of that particular state. For example, during rendering, if there
+ * are 612 total render images to be done, and 153 are complete, then
+ * the status would start with 1, and the last part would be:
+ *
+ *  (612/153)*100 = 25;
+ *
+ * Therefore our code would be 125.
+ *
+ * @param {Int|String} status 3 digit status code. Can be int or string.
+ */
+_i3dv_container.prototype.modelExists = function (status){
+    // Pads with zeros then cuts down to 3 digits.
+    status = status + "00";
+    status = status.substr(0,3);
+    switch(parseInt(status[0])){
+        case 1:
+            this.modelNotExists("The model is currently being rendered. " + status[1] + status[2] + "% complete.");
+            return false;
+            break;
+        case 2:
+            this.modelNotExists("Initial render complete, but the files are still being transferred. " + status[1] + status[2] + "% complete.");
+            return false;
+            break;
+        case 9:
+        default:
+            return true;
+    }
+}
+
+/**
+ * If the model doesn't exist of isn't ready, this function is called.
+ *
+ * @param {String} [text] optional text to have in the title element. Default is 'The model does not exist, sorry.'.
+ */
+_i3dv_container.prototype.modelNotExists = function (text){
+    this.modelError(text);
+}
+
+/**
+ * This replaces all the innerHTML of our container with a div in a div
+ * with some text inside, indicating the problem.
+ *
+ * @param {String} [text] optional text to have in the title element. Default is 'The model does not exist, sorry.'.
+ */
+_i3dv_container.prototype.modelError = function (text){
+    text = (typeof text === 'undefined') ? 'The model does not exist, sorry.' : text + "";
+    this.container.innerHTML = "";
+    this.noFile = document.createElement('div');
+    this.noFile.classList.add("i3dv_no_file");
+    this.noFileTitle = document.createElement('div');
+    this.noFileTitle.classList.add("i3dv_no_file_title");
+    this.noFileTitle.innerHTML = text;
+    this.noFile.appendChild(this.noFileTitle);
+    this.container.appendChild(this.noFile);
+}
+
+
+/**
+ * Destroys the viewer and container and everything...this is basically
+ * only used of the container is re-initialised...
+ */
+_i3dv_container.prototype.destroy = function () {
+    this.active = false;
+    try{ this.player.destroy();
+    } catch (e){}
+    try{ this.elem.removeChild(this.iOC);
+    } catch (e){}
+    try{ this.elem.removeChild(this.loading);
+    } catch (e){}
+    try{ this.elem.removeChild(this.loadingbar);
+    } catch (e){}
+    this.elem.style = this.originalstyle;
+    this.elem.removeEventListener("mousedown");
+    this.elem.style.background = "none";
+    this.elem.style.backgroundColor = "none";
+    this.elem.innerHtml = "";
+    this.container.removeChild(this.elem);
+}
+
+/**
+ * Sets the tab index of the container element. This is needed
+ * to capture keypresses on that element.
+ *
+ * @param {int} [i] the index, default 1
+ */
+_i3dv_container.prototype.setTabIndex = function (i) {
+    i = (typeof i === "undefined") ? 1 : i;
+    this.elem.setAttribute("tabindex", i);
+}
+
+/**
+ * Loads the correct player depending on the playertype and initiates it.
+ */
+_i3dv_container.prototype.load = function () {
+    if(!this.active) return;
+    switch(this.options.playertype) {
+        case "image":
+            this.player = new _i3dv_imagePlayer(this.options,this);
+            break;
+        case "canvas":
+            this.player = new _i3dv_canvasPlayer(this.options,this);
+            break;
+        case "videojs":
+            this.player = new _i3dv_videojsPlayer(this.options,this);
+            break;
+        case "video":
+            this.player = new _i3dv_videoPlayer(this.options,this);
+            break;
+        case "auto":
+        default:
+            if(/(iPad|iPhone|iPod)/g.test(navigator.userAgent)) {
+                this.player = new _i3dv_imagePlayer(this.options,this);
+            } else if (BrowserDetect.browser === "Safari" && BrowserDetect.OS === "Windows"){
+                this.player = new _i3dv_imagePlayer(this.options,this);
+            } else if(this.options.trans) {
+                this.player = new _i3dv_canvasPlayer(this.options,this);
+            } else {
+                this.player = new _i3dv_videojsPlayer(this.options,this);
+            }
+    }
+    this.player.init();
+}
+
+/**
+ * This function sets up the events (drag, move, zoom, etc)
+ * 
+ * It is called in the main script (as it relies on lots of
+ * functions common to each viewer type)
+ *
+ * @requires hammer.js 
+ */
+_i3dv_container.prototype.doEvents = function (){
+    if(!this.active) return;
+    this.hammer = Hammer(this.elem);
+    if(BrowserDetect.browser === "Explorer" && parseInt(BrowserDetect.version) >= 9) {
+        Hammer.plugins.showTouches();
+    }
+    var that = this;
+    window.addEventListener("resize",function(){
+        that.player.scaler();
+    }, false);
+    if(this.options["interactive"]){
+        if(Hammer.HAS_TOUCHEVENTS || Hammer.HAS_POINTEREVENTS) {
+            if(!this.options["nomove"]) {
+                this.hammer.on("tap",function(e){
+                    that.player.i.v.x = 0;
+                    that.player.i.v.y = 0;
+                });
+            }
+            if(this.options["zoom"]) {
+                this.hammer.on("pinch",function(e){
+                    that.player.i.scale = e.gesture.scale;
+                    that.player.scaler();
+                });
+            }
+        }
+        
+        if(this.options["zoom"]) {
+            this.elem.addEventListener('DOMMouseScroll',
+                function(e){
+                    that.player.zoom(e);
+                },
+            false);
+            this.elem.addEventListener('mousewheel',
+                function(e){
+                    that.player.zoom(e);
+                }, 
+            false);
+            
+            this.hammer.on("doubletap",function(e){
+                if(that.hasZoomed){
+                    that.player.zoomOut(e);
+                    that.player.zoomOut(e);
+                } else {
+                    that.player.zoomIn(e);
+                    that.player.zoomIn(e);
+                }
+                that.hasZoomed = !that.hasZoomed;
+            });
+        }
+        if(this.options["move"]) {
+            if(this.options["keys"]){
+                that.elem.addEventListener('keydown',function(e){
+                    that.player.keypad(e);
+                }, false);
+            }
+            this.hammer.on("drag",      function(e){
+                that.player.drag(e);
+            });
+            this.hammer.on("touch",     function(e){
+                that.player.start(e);
+            });
+            this.hammer.on("release",   function(e){
+                that.player.stop(e);
+            });
+        }
+            
+    }
+}
+
+/**
+ * The main default player function, on which all player types are based.
+ * This sets up some of the common variables and functions.
+ *
+ * @param {object} o the parents options
+ * @param {object} c the parent container
+ */
+var _i3dv_player = function(o,c) {
+    this.options = o;
+    this.container = c;
+    
+    /**
+     * This i object holds all the information about the viewer. i is for i3dv, and
+     * holds i3dv properties (don't ask why, this is just a legacy thing).
+     * 
+     * Where needed, each option is described in detail with a comment next to it.
+     *
+     * @todo rename options.decayfactor to options.friction and change this friction
+     *  parameter's name to something else, as it is misleading for us physicists.
+     */
+    this.i = {
+        active:         false,                      // Whether the player is active or not yet.
+        firstload:      true,                       // Whether it's the first load or not (players can be loaded multiple times)
+        size:           0,                          // Size of the viewer
+        friction: {                         
+            x: this.options.friction.x,             // These are the viewer frictions, or rather, how responsive
+            y: this.options.friction.y              // the viewer is to movement. (this should be renamed and the
+        },                                          // decayfactor should be called friction instead...)
+        dim: Math.min(                              // The minimum container dimension
+            this.container.elem.clientWidth,        
+            this.container.elem.clientHeight
+        ),                                          
+        col: this.options.start.col,                // The current column
+        row: this.options.start.row,                // The current row
+        x: this.options.start.col,                  // The position on the x axis
+        y: this.options.start.row,                  // The position on the y axis
+        v: {                                        // The velocity values
+            x: this.options.start.v.x,              // 
+            y: this.options.start.v.y,              // 
+            max: 5                                  // 
+        },                                          // 
+        scale: {                                    // The scale factors (used for zoom)
+            val:        this.options.start.scale,   //
+            ratio:      1.2,                        //
+            min:        0.5,                        //
+            max:        3                           //
+        },                                          //
+        progress:       0,                          // The current progress
+        percentloaded:  0,                          // The current percent loaded
+        last:{                                      // For storing the last calculated versions of various variables
+            row:        -1,                         //
+            col:        -1,                         //
+            x:          -1,                         //
+            y:          -1,                         //
+            size:       -1,                         //
+            scale:      -1,                         //
+            percentloaded : -1
+        },                                          //
+        ratio:          0,                          // The ratio between rows and columns.
+        context:        0                           // This just stores the canvas context in various places.
+    };
+    
+    // Holds the render loop variable from requestAnimationFrame
+    this.renderer = false;
+    
+    // this is for the render loop. A simple object for storing times and deltas.
+    this.time = {
+        now: new Date(),
+        prev: new Date(),
+        delta: 0
+    }
+    
+    // whether the player is destroyed or not...
+    this.destroyed = false;
+    
+    // the loadchecker object, one property for each viewer.
+    // @todo I'm sure this doesn't need to be an object...
+    this.loadChecker = {};
+}
+
+/**
+ * the default init function.
+ */
+_i3dv_player.prototype.init = function () {
+    this.load();
+    this.scaler();
+}
+
+/**
+ * The main render loop. To keep things consistent, this only calls the draw
+ * function if the delta between calls is greater than 10ms, otherwise we get
+ * some problems with stuttering and uneven framerates.
+ */
+_i3dv_player.prototype.render = function() {
+    this.time.delta = this.time.now - this.time.prev;
+    if(this.time.delta > 16) {
+        this.draw();
+        this.time.prev = this.time.now;
+    }
+    this.time.now = new Date();
+    this.renderer = requestAnimationFrame(this.render.bind(this))
+}
+
+/**
+ * The default Draw function. Basically just checks the co-ordinates, and if
+ * they are different, it seeks the viewer.
+ */
+_i3dv_player.prototype.draw = function () {
+    this.checkCoords();
+    if(this.i.last.row != this.i.row || this.i.last.col != this.i.col){
+        this.seek();
+        this.i.last.col = this.i.col;
+        this.i.last.row = this.i.row;
+    }
+};
+
+/**
+ * this destroys and removes the viewer and any eventListeners, so that it can be re-initiated.
+ */
+_i3dv_player.prototype.destroy = function () {
+    this.destroyed = true;
+    cancelAnimationFrame(this.renderer);
+    this.viewer.removeEventListener("progress");
+    this.viewer.removeEventListener("ready");
+    try{ this.container.elem.removeChild(this.viewer);
+    } catch (e){}
+};
+
+/**
+ * default load function. not used.
+ */
+_i3dv_player.prototype.load = function () {
+    console.log("load");     
+};  
+
+_i3dv_player.prototype.fileNotExist = function (){
+    console.log("_player.fileNotExist");
+    this.container.fileNotExist();
+    this.destroy();
+}
+
+/**
+ * default seek function. not used.
+ */
+_i3dv_player.prototype.seek = function () {
+    console.log("seek");     
+};  
+
+/**
+ * Callback for any errors (only attached to the video players at the moment).
+ */
+_i3dv_player.prototype.error = function (e) {
+    console.log("error");
+    console.log(e);
+    if(typeof e.preventDefault != "undefined") e.preventDefault();
+    this.load();
+};   
+
+/**
+ * Sets the velocities to zero.
+ */
+_i3dv_player.prototype.start = function () {
+    this.i.v.x = this.i.v.y = 0;
+};
+
+/**
+ * Clears the detectStillMouse timeout from the drag event.
+ */
+_i3dv_player.prototype.stop = function () {
+    clearTimeout(this.detectStillMouse);
+};
+
+/**
+ * Zooms in by i.scale.ratio (default 1.2)
+ */
+_i3dv_player.prototype.zoomIn = function () {
+    this.i.scale.val = Math.ceil((this.i.scale.val*this.i.scale.ratio)*5)/5;
+    this.scaler();
+};
+
+/**
+ * Zooms out by i.scale.ratio (default 1.2)
+ */
+_i3dv_player.prototype.zoomOut = function () {
+    this.i.scale.val = Math.floor((this.i.scale.val/this.i.scale.ratio)*5)/5;
+    this.scaler();
+};
+
+/**
+ * Callback for the scroll wheel. Calls zoomIn or Out depending
+ * on whether the user zoomed in or out.
+ */
+_i3dv_player.prototype.zoom = function (e) {
+    if(typeof e.gesture != "undefined"){
+        e.gesture.preventDefault();
+    }
+    e.preventDefault();
+    this.i.v.y = this.i.v.x = 0;
+    var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
+    (delta == 1) ? this.zoomIn(e) : this.zoomOut(e);
+    return false;
+};
+
+/**
+ * This caculates the proper sizes and scales depending on the
+ * container size and the scale values. It also, if friction is
+ * set to "auto", sets the friction value.
+ *
+ * Finally, it calls resize.
+ */
+_i3dv_player.prototype.scaler = function () {
+    if(this.destroyed) return;
+    // Sets the min/max scale
+    this.i.scale.val = Math.min(Math.max(this.i.scale.val,this.i.scale.min),this.i.scale.max);
+    
+    // Gets the minimum container dimension
+    var height  = this.container.elem.clientHeight;
+    var width   = this.container.elem.clientWidth;
+    this.i.dim  = Math.min(width, height);
+    this.i.size = this.i.dim * this.i.scale.val;
+
+    // Sets the frictions accordingly
+    this.i.ratio = this.options.steps.x/(this.options.steps.y*2);
+    var power = 0.47;
+    if(this.options.friction.x === "auto")
+        this.i.friction.x  = (240*(1/this.i.ratio)/Math.pow(this.i.dim,power));
+    if(this.options.friction.y === "auto")
+        this.i.friction.y  = (240*this.i.ratio)/Math.pow(this.i.dim,power);
+    this.resize();
+};
+
+/**
+ * This resizes the actual viewer inside the container and makes
+ * sure that it's still in the center.
+ */
+_i3dv_player.prototype.resize = function () {
+    if(this.destroyed) return;
+    // Change canvas width and height
+    this.viewer.width = 
+    this.viewer.height = this.i.size;
+    this.viewer.style.width = 
+    this.viewer.style.height = this.i.size + "px";
+
+    // Centers the video
+    var mTB = Math.floor((this.container.elem.clientHeight - this.i.size)/2);
+    var mRL = Math.floor((this.container.elem.clientWidth  - this.i.size)/2);
+    this.viewer.style.margin = mTB + "px " + mRL + "px";
+}
+
+/**
+ * This rotates the object according to the velocity.
+ */
+_i3dv_player.prototype.rotate = function () {
+    if(this.destroyed) return;
+    // Max and Min
+    this.i.v.x = ((this.i.v.x > this.i.v.max) ? this.i.v.max : (this.i.v.x < -this.i.v.max) ? -this.i.v.max : this.i.v.x);
+    this.i.v.y = ((this.i.v.y > this.i.v.max) ? this.i.v.max : (this.i.v.y < -this.i.v.max) ? -this.i.v.max : this.i.v.y);
+    
+    // Sets the minimum velocity
+    if(Math.abs(this.i.v.x) < 0.01) this.i.v.x = 0;
+    if(Math.abs(this.i.v.y) < 0.01) this.i.v.y = 0;
+    
+    // Decays the velocity
+    if(this.options.decayfactor && this.options.momentum){
+        var d = 1-(this.options.decayfactor/2500);
+        if(this.i.v.x < 0)
+            this.i.v.x = (-(Math.pow(Math.abs(this.i.v.x)+1,d)-1));
+        else if(this.i.v.x > 0)
+            this.i.v.x = Math.pow(Math.abs(this.i.v.x)+1,d)-1;
+        if(this.i.v.y < 0) 
+            this.i.v.y = (-(Math.pow(Math.abs(this.i.v.y)+1,d)-1));
+        else if(this.i.v.y > 0)
+            this.i.v.y = Math.pow(Math.abs(this.i.v.y)+1,d)-1;
+    }
+
+    // Add this to this.i.x (taking into account the friction)
+    this.i.x += this.i.v.x*(1/this.i.friction.x);
+    this.i.y += this.i.v.y*(1/this.i.friction.y);
+};
+
+/**
+ * This sets the column and row from a combination of the values of
+ * velocities and co-ordinates.
+ */
+_i3dv_player.prototype.checkCoords = function () {
+    if(this.destroyed) return;
+    if(this.i.v.x || this.i.v.y) this.rotate();
+    if(!this.options.momentum) this.i.v.x = this.i.v.y = 0;
+
+    // Stops negative this.i.x
+    if(this.i.x < 0) this.i.x = this.options.steps.x + this.i.x;
+
+    // Modulo this.i.x for wraparaound
+    this.i.x = this.i.x % this.options.steps.x;
+
+    // this.i.y cannot be greater than steps or less than 0
+    this.i.y = Math.max(Math.min(this.i.y,this.options.steps.y-1),0);
+    
+    // Calculates the Row and Column.
+    this.i.row = Math.floor(Math.max(Math.min(Math.floor( this.i.y ) % (this.options.steps.y),this.options.steps.y-1),0));
+    this.i.col = Math.floor(Math.max(Math.min(Math.floor( this.i.x ) % (this.options.steps.x),this.options.steps.x-1),0));
+};
+
+/**
+ * Callback for the drag event.
+ */
+_i3dv_player.prototype.drag = function (e) {
+    if(this.destroyed) return;
+    clearTimeout(this.detectStillMouse);
+    
+    if(typeof e.gesture != "undefined"){
+        var x =  e.gesture.center.pageX;
+        var y =  e.gesture.center.pageY;
+    } else {
+        var x =  e.x;
+        var y =  e.y;
+    }
+    this.i.v.x = (this.i.last.x - x);
+    this.i.v.y = (this.i.last.y - y);
+    
+    this.i.last.x = x;
+    this.i.last.y = y;
+    
+    this.draw();
+    
+    var that = this;
+    this.detectStillMouse = setTimeout(function(){
+        that.i.v.x = that.i.v.y = 0;
+    }, 50);
+}
+
+/**
+ * The default loadComplete functions. This gets rid of the loading bar,
+ * puts on the overlay (with instructions, ads and maximise button) and
+ * then insets the viewer, doing the background at the same time.
+ *
+ * After all this, it sets the render loop going.
+ */
+_i3dv_player.prototype.loadComplete = function () {
+    if(this.destroyed) return;
+    this.container.fadeOut(this.container.loading);
+    this.container.doOverlayTimeouts();
+    this.container.appendChild(this.viewer);
+    this.doBackground();
+    this.render();
+}
+
+/**
+ * default doBackground function. Not used.
+ */
+_i3dv_player.prototype.doBackground = function () {
+    console.log("doBackground");
+}
+
+/**
+ * This just updates the loading bar and then calls loadComplete when the percentage
+ * loaded is greater than 99%.
+ *
+ * In the case of Chrome, it also checks to see if the percentage is changing. Chrome
+ * has a problem with buffering videos in that it's buffer cache is *very* small (less
+ * than 3mb) hence it needs to be initiated before the video actually finishes loading.
+ * It will store the whole video once it starts playing however, but this does mean there
+ * might be a bit of lag on Chrome.
+ *
+ * @todo Find a better solution for Chrome.
+ */
+_i3dv_player.prototype.progress = function () {
+    if(this.destroyed) return;
+    var p = this.percent();
+    this.container.loadingBar.width = this.container.loadingBar.style.width = p + "%";
+    if(p > 99 || (BrowserDetect.browser == "Chrome" && p > 15 && p == this.i.last.percentloaded)){
+        this.loadComplete();
+    }
+    this.i.last.percentloaded = p;
+}
+
+/**
+ * default function for getting the percentage. Not used.
+ */
+_i3dv_player.prototype.percent = function () {
+    if(this.destroyed) return;
+    return this.i.percentloaded;
+}
+
+/**
+ * Call back for the keypad presses. Basically increments or decrements
+ * the x or y value depending on the key pressed.
+ */
+_i3dv_player.prototype.keypad = function (e){
+    if(this.destroyed) return;
+    var wasThere = false;
+    if(e.keyCode == this.options.keycode.up) {
+        this.i.y++;
+        wasThere = true;
+    } else if(e.keyCode == this.options.keycode.down){
+        this.i.y--;
+        wasThere = true;
+    } else if(e.keyCode == this.options.keycode.left) {
+        this.i.x++;
+        wasThere = true;
+    } else if(e.keyCode == this.options.keycode.right) {
+        this.i.x--;
+        wasThere = true;
+    }
+    if(wasThere) {
+        this.i.v.x = this.i.v.y = 0;
+        if (e.preventDefault)
+            e.preventDefault();
+        else
+            e.returnValue = false;
+        this.draw();
+        return false;
+    }
+}
+
+/**
+ * Inherits the default player and gives a v object that stores
+ * all sorts of 'video' information.
+ */
+_i3dv_videoPlayer = function (o, c) {
+    _i3dv_player.call(this, o, c);
+    this.v = {
+        size:       0,
+        type:       0,
+        fn:         false,
+        frame:      0,
+        time:       0,
+        fps:        (this.options.vfps/1),
+        last: {     
+            size:   false,
+            type:   false,
+            frame:  0,
+            time:   0,
+            fn:     null
+        },          
+        hasBg:      false
+    };
+}
+
+/**
+ * Inherits the videoPlayer
+ */
+_i3dv_videojsPlayer = function (o, c){
+    _i3dv_videoPlayer.call(this, o, c);
+}
+
+/**
+ * Inherits the videoPlayer
+ */
+_i3dv_canvasPlayer = function (o, c) {
+    _i3dv_videoPlayer.call(this, o, c);
+}
+
+/**
+ * Sets up the image player, inheriting the default player.
+ *
+ * This also creates a v object for holding options, however, not
+ * video specific like above, but very similar.
+ *
+ * This also initiates the image buffer array to hold all the
+ * background images.
+ */
+_i3dv_imagePlayer = function (o, c) {
+    _i3dv_player.call(this, o, c);
+    this.v = {
+        size:       0,
+        type:       "jpg",
+        fn:         false,
+        loaded:     0,
+        bg: {
+            position:   0,
+            src:        0,
+        },
+        last: {  
+            size:   false,
+            type:   false,
+            fn:     null,   
+            bg: {
+                position:   null,
+                src:        null,
+            }
+        },          
+        hasBg:      false
+    };
+    this.imageBuffer = new Array(this.options.steps.y);
+}
+
+/**
+ * This creates the 4 basic players.
+ *
+ * canvasPlayer and videojsPlayer inherit from videoPlayer.
+ * videoPlayer and imagePlayer just inherit from the generic player.
+ */
+_i3dv_videoPlayer.prototype     = Object.create( _i3dv_player.prototype );
+_i3dv_canvasPlayer.prototype    = Object.create( _i3dv_videoPlayer.prototype );
+_i3dv_videojsPlayer.prototype   = Object.create( _i3dv_videoPlayer.prototype );
+_i3dv_imagePlayer.prototype     = Object.create( _i3dv_player.prototype );
+
+/**
+ * This loads the videoplayer. It creates two objects (this.viewer and
+ * this.video) for seperating the video specific things from the viewer
+ * based things.
+ *
+ * This behaviour allows the player to reuse a lot of code later on.
+ * 
+ * This loads the appropriate video and sets up some events for checking the
+ * progress of the video (loading) and whether it is ready or not.
+ */
+_i3dv_videoPlayer.prototype.load = function (){
+    if(this.destroyed) return;
+    this.viewer = this.video = document.createElement("video");
+    this.viewer.classList.add("i3dv_video");
+    this.getVideoInfo();
+    if(this.v.size !== this.v.last.size){
+        this.v.fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/" + this.v.size + "." + this.v.type;
+        console.log("fn = " + this.v.fn);
+        this.viewer.src = this.v.fn;
+        this.viewer.setAttribute("preload", "auto");
+        this.viewer.setAttribute("poster",this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg");
+        this.viewer.load();
+        var that = this;
+        if(BrowserDetect.browser == "Chrome" || BrowserDetect.browser == "Safari" || BrowserDetect.browser == "Opera"){
+            this.loadChecker[this.container.elem.id] = setInterval(function (){
+                that.progress.call(that);
+            }, 200);
+        } else {
+            this.viewer.addEventListener('progress',function(e){
+                that.progress.call(that, e);
+            }, false);
+        }
+        this.v.last.size = this.v.size;
+    }
+}
+
+/**
+ * The main loading function for the Canvas player.
+ *
+ * This creates the video and canvas element and loads the video just like 
+ * with the video player. There is one important difference. This function
+ * sets up the video element with a "seeked" event, so that when the video
+ * has finished seeking, it updates the canvas.
+ *
+ * This is preferable to updating the canvas alongside seeking the player
+ * because otherwise it lags behind by 1 frame. For some reason the event
+ * actually fires too early in Opera and Safari...hence the timeout as well,
+ * just in case...
+ *
+ * @todo Find a way to do without the timeout
+ */
+_i3dv_canvasPlayer.prototype.load = function (){
+    if(this.destroyed) return;
+    this.video = document.createElement("video");
+    var that = this;
+    this.video.addEventListener("seeked",function(){
+        that.vToC();
+        if(BrowserDetect.browser == "Opera" || BrowserDetect.browser == "Safari"){
+            setTimeout(that.vToC(),1000);
+        }
+    },false);
+    
+    // Un-comment these to *see* the video element that the canvas is being
+    // copied from for debugging purposes.
+    // this.container.elem.appendChild(this.video);
+    // this.video.style.position = "absolute";
+    // this.video.style.top = 0;
+    // this.video.style.left = 0;
+    // this.video.width = this.video.style.width = "70px";
+    // this.video.height = this.video.style.height = "70px";
+    
+    this.viewer = document.createElement("canvas");
+    this.viewer.classList.add("i3dv_video");
+    this.vcontext = this.viewer.getContext("2d");
+    this.getVideoInfo();
+    if(this.v.size !== this.v.last.size){
+        this.v.fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/" + this.v.size + "." + this.v.type;
+        console.log("fn = " + this.v.fn);
+        this.video.src = this.v.fn;
+        this.video.setAttribute("preload", "auto");
+        this.video.setAttribute("poster",this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg");
+        this.video.load();
+        if(BrowserDetect.browser == "Chrome" || BrowserDetect.browser == "Safari" || BrowserDetect.browser == "Opera"){
+            this.loadChecker[this.container.elem.id] = setInterval(function (){
+                that.progress.call(that);
+            }, 200);
+        } else {
+            this.video.addEventListener('progress',function(e){
+                that.progress.call(that, e);
+            }, false);
+        }
+        this.v.last.size = this.v.size;
+    }
+}
+
+/**
+ * This is the main loading function for the videojs player.
+ *
+ * This makes a video element and assigns it to a videojs object
+ * (in this case this.viewer_videojs). It also sets up the progress
+ * and loading events, as well as setting a loadChecker interval
+ * in the cases of Chrome, Safari and Opera...(funnily enough, IE
+ * seems to be the only one that calls "progress" reliably);
+ */
+_i3dv_videojsPlayer.prototype.load = function (){
+    if(this.destroyed) return;
+    this.viewer = this.video = document.createElement("video");
+    this.getVideoInfo();
+    if(this.v.size !== this.v.last.size){
+        var that = this;
+        _V_(this.viewer, {
+            "width"     : this.i.dim,
+            "height"    : this.i.dim,
+            "controls"  : false, 
+            "autoplay"  : false, 
+            "preload"   : "auto",
+            "poster"    :  this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg"}, 
+        function(){
+            that.viewer_videojs = this;
+            var fn = that.options.baseurl + that.options.renderpath + that.options.modelid + "/videos/" + that.v.size + ".";
+            console.log("fn = " + fn + "{mp4/webm}");
+            that.viewer_videojs.src([
+                { type: "video/webm", src: fn + "webm" },
+                { type: "video/mp4", src: fn + "mp4" }
+            ]);
+            that.viewer_videojs.load();
+            if(BrowserDetect.browser == "Chrome" || BrowserDetect.browser == "Safari" || BrowserDetect.browser == "Opera"){
+                that.loadChecker[that.container.elem.id] = setInterval(function (){
+                    that.progress();
+                }, 200);
+            } else {
+                that.viewer_videojs.on("progress", function(e) {
+                    that.progress();
+                });
+                that.viewer_videojs.on("loadedalldata", function(e) {
+                    that.loadComplete();
+                });
+            }
+            that.viewer_videojs.on("error", function(e) {
+                that.error(e);
+            });
+        });
+        this.v.last.size = this.v.size;
+    }
+    this.viewer.classList.add("i3dv_video");
+}
+
+/**
+ * The main loading function for the images.
+ *
+ * It creates the viewer element (just a div).
+ *
+ * It populates the imageBuffer object with images and 
+ * starts their loading. It then calls back the imageLoaded
+ * function when each image is finished loading.
+ */
+_i3dv_imagePlayer.prototype.load = function (){
+    if(this.destroyed) return;
+    var that = this;
+    this.viewer = document.createElement("div");
+    this.viewer.classList.add("i3dv_video");
+    this.getImageInfo();
+    if(this.v.size !== this.v.last.size){
+        var row = this.i.row;
+        var fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/sprites/" + this.v.size + "/sprite-";
+        for(var i=0; i < this.options.steps.y; i++){
+            this.imageBuffer[row]        = new Image();
+            this.imageBuffer[row].src    = fn + row + "." + this.v.type;
+            this.imageBuffer[row].id     = this.container.elem.id + "_sprite" + row;
+            this.imageBuffer[row].onload = function(){
+                that.imageLoaded(this);
+            };
+            row = (row + 1) % this.options.steps.y;
+        }
+        console.log(fn + "i." + this.v.type);
+        this.v.last.size = this.v.size;
+    }
+}
+
+/**
+ * Callback for each image that's loaded in the image player. The
+ * v.loaded variables increases each time, so that it can be used
+ * to work out what percentage of images are loaded (this was the
+ * best way I could think of for working out the percentage loaded
+ * in the case of the image player...).
+ *
+ * This could be integrated into the anonymous function above...
+ */
+_i3dv_imagePlayer.prototype.imageLoaded = function (){
+    this.v.loaded++;
+    this.progress();
+}
+
+/**
+ * Gets the image dimension needed depending on player size or quality setting.
+ */
+_i3dv_imagePlayer.prototype.getImageInfo = function (){
+    // Selects the right size
+    var q = this.options["quality"],
+    v = this.v;
+    if((this.i.dim > 720 && q === 0) || q > 75)
+        v.size = 960;
+    else if((this.i.dim > 460 && q === 0) || q > 50)
+        v.size = 720;
+    else if((this.i.dim > 380 && q === 0) || q > 25)
+        v.size = 460;
+    else 
+        v.size = 380;
+}
+
+/**
+ * This doBackground function basically puts the video on a canvas
+ * and takes the top left pixel colour, making that the background
+ * for the container. This is done as well as the thumbnail because
+ * the video bg is slightly different from the thumbnail bg thanks
+ * to the video compression.
+ */
+_i3dv_videoPlayer.prototype.doBackground = function () {
+    if(this.destroyed) return;
+    if(BrowserDetect.browser === "Safari" && BrowserDetect.OS === "Windows") return;
+    this.container.thumbcanvas.style.height = 
+        this.container.thumbcanvas.style.width  = 
+        this.container.thumbcanvas.height = 
+        this.container.thumbcanvas.width  = 
+        this.viewer.height;
+    this.context = this.container.thumbcanvas.getContext("2d");
+    this.context.drawImage(
+        this.video,
+        0,
+        0,
+        this.container.thumbcanvas.width,
+        this.container.thumbcanvas.height
+    );
+    var data = 
+        this.context.getImageData(
+            0,
+            0,
+            1,
+            1
+        ).data;
+    var brt = data[0] + data[1] + data[2] ;
+    if(brt === 0 && this.v.hasBg === false){
+        this.v.hasBg = true;
+        var that = this;
+        setTimeout(function(){that.doBackground();},500);
+    } else {
+        this.container.elem.style.backgroundColor = "rgba("+data[0]+","+data[1]+","+data[2]+",1)";
+        this.v.hasBg = true;
+    }
+}
+
+/**
+ * This inherits the standard doBackground function unless trans = true
+ */
+_i3dv_canvasPlayer.prototype.doBackground = function (){
+    if(this.options.trans){
+        this.container.elem.style.backgroundColor = this.options.bg;
+    } else {
+        _i3dv_videoPlayer.prototype.doBackground.call(this);
+    }
+}
+
+/**
+ * The doBackground function for the image player should do nothing.
+ */
+_i3dv_imagePlayer.prototype.doBackground = function (){
+    return;
+}
+
+/**
+ * This gets info on the video type/size needed.
+ */
+_i3dv_videoPlayer.prototype.getVideoInfo = function (){
+    if(this.destroyed) return;
+    // Checks client playability
+    var c = this.video, 
+    p = "probably", 
+    q = this.options["quality"], 
+    v = this.v,
+    w = "webm";
+    if(c.canPlayType('video/webm; codecs="vpm, yuv420p"') === p){
+        v.type = w;
+    } else if(c.canPlayType('video/webm; codecs="vp8, vorbis"') === p){
+        v.type = w;
+    } else if (c.canPlayType('video/mp4; codecs="avc1.4D401E, mp4a.40.2"') === p){
+        v.type = "mp4";
+    } else {
+        v.type = w;
+    }
+    
+    // Selects the right size
+    if((this.i.dim > 720 && q === 0) || q > 75)
+        v.size = 960;
+    else if((this.i.dim > 360 && q === 0) || q > 50)
+        v.size = 720;
+    else 
+        v.size = 360;
+}
+
+/**
+ * Stops the loadChecker interval as well as inheriting the _player loadComplete method.
+ * 
+ * @see this.container._player.prototype.loadComplete
+ */
+_i3dv_videoPlayer.prototype.loadComplete = function() {
+    _i3dv_player.prototype.loadComplete.call(this);
+    if(BrowserDetect.browser == "Chrome" || BrowserDetect.browser == "Safari" || BrowserDetect.browser == "Opera")
+        clearInterval(this.loadChecker[this.container.elem.id]);
+}
+
+/**
+ * Resizes the canvas payer and then redraws the video to the canvas.
+ * 
+ * @see this.container._player.prototype.resize
+ */
+_i3dv_canvasPlayer.prototype.resize = function (){
+    _i3dv_player.prototype.resize.call(this);
+    this.vToC();
+    var that = this;
+    if(BrowserDetect.browser == "Safari"){
+        setTimeout(function(){
+            that.vToC();
+        }, 1000);
+    }
+}
+
+/**
+ * Resizes image player, setting the background size and then seeking to
+ * redraw the background.
+ * 
+ * @see this.container._player.prototype.resize
+ */
+_i3dv_imagePlayer.prototype.resize = function (){
+    _i3dv_player.prototype.resize.call(this);
+    this.viewer.style.backgroundSize = "auto " + this.i.size + "px";
+    this.seek(true);
+}
+
+/**
+ * Seeks to the correct time in the video
+ */
+_i3dv_videoPlayer.prototype.seek = function (){
+    if(this.destroyed) return;
+    this.v.frame = ( (this.i.row * this.options.steps.x) + this.i.col );
+    this.v.time = this.v.frame / this.v.fps;
+    if(this.v.time != this.v.last.time && typeof this.v.time !== "undefined"){
+        this.video.currentTime = this.v.time;
+        this.v.last.time = this.v.time;
+    }
+}
+
+/**
+ * Seeks to the correct time in the video
+ */
+_i3dv_videojsPlayer.prototype.seek = function (){
+    if(this.destroyed) return;
+    this.v.frame = ( (this.i.row * this.options.steps.x) + this.i.col );
+    this.v.time = this.v.frame / this.v.fps;
+    if(BrowserDetect.browser == "Explorer") this.v.time += (2/this.v.fps);
+    if(this.v.time != this.v.last.time && typeof this.v.time !== "undefined"){
+        this.viewer_videojs.currentTime(this.v.time);
+        this.v.last.time = this.v.time;
+    }
+}
+
+/**
+ * This is the seek function for the image based player. It moves and changes the background
+ * depending on the column and row we want to look at.
+ */
+_i3dv_imagePlayer.prototype.seek = function (force){
+    force = (typeof force === "undefined") ? false : force;
+    if(this.i.last.row !== this.i.row || force) {
+        this.viewer.style.backgroundImage = "url('" + (this.imageBuffer[this.i.row].src) + "')";
+        this.viewer.style.backgroundPosition = (-this.i.col * this.i.size) + "px 0";
+    } else if(this.i.last.col !== this.i.col) {
+        this.viewer.style.backgroundPosition = (-this.i.col * this.i.size) + "px 0";
+    }
+}
+
+/**
+ * Puts the video on the canvas and does transparency if need be.
+ */
+_i3dv_canvasPlayer.prototype.vToC = function () {
+    this.viewer.getContext("2d").drawImage(this.video,0,0,this.viewer.width,this.viewer.height);
+    if(this.options.trans){
+        this.trans();
+    }
+}
+
+/**
+ * Does a key type transparency on the canvas based on the top left pixel colour.
+ * 
+ * This scans every pixel on the canvas and makes it transparent depending on
+ * whether it's in the range set by transtolerance from the top left pixel colour.
+ * By default this is set to 100.
+ */
+_i3dv_canvasPlayer.prototype.trans = function (){
+    var frame = this.vcontext.getImageData(0,0,this.viewer.width, this.viewer.height);
+    var data = frame.data;
+    var l = data.length,
+    r = data[0],
+    g = data[1],
+    b = data[2];
+    for(var i = 0; i < l; i+=4){
+        diff = Math.abs((data[i] - data[0])) + Math.abs((data[i+1] - data[1])) + Math.abs((data[i+2] - data[2]));
+        if(diff <= this.options.transtolerance/1.5) {
+            frame.data[i+3] = 0;
+        } else if(diff <= this.options.transtolerance) { 
+            frame.data[i+3] = 255*((diff/this.options.transtolerance));
+        }
+    }
+    this.vcontext.putImageData(frame,0,0);
+}
+
+/**
+ * These three functions simply return the percent loaded on a scale of 1-100.
+ * 
+ * @return {float} the percentage (between 0 and 100).
+ */
+_i3dv_videoPlayer.prototype.percent = function (){
+    if(this.destroyed) return;
+    this.i.percentloaded = (this.video.duration) ? (this.video.buffered.end(0) / this.video.duration)*100 : 0;
+    return this.i.percentloaded;
+}
+
+_i3dv_imagePlayer.prototype.percent = function (){
+    if(this.destroyed) return;
+    this.i.percentloaded = ((this.v.loaded * 100)/ this.options.steps.y);
+    return this.i.percentloaded;
+}
+
+_i3dv_videojsPlayer.prototype.percent = function (){
+    if(this.destroyed) return;
+    this.i.percentloaded =(this.viewer_videojs.duration()) ? (this.viewer_videojs.buffered().end(0) / this.viewer_videojs.duration())*100 : 0;
+    return this.i.percentloaded;
 }
