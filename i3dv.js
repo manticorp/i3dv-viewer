@@ -1248,9 +1248,9 @@ _i3dv_player.prototype.draw = function () {
 _i3dv_player.prototype.destroy = function () {
     this.destroyed = true;
     cancelAnimationFrame(this.renderer);
-    this.viewer.removeEventListener("progress");
-    this.viewer.removeEventListener("ready");
-    try{ this.container.elem.removeChild(this.viewer);
+    this.elem.removeEventListener("progress");
+    this.elem.removeEventListener("ready");
+    try{ this.container.elem.removeChild(this.elem);
     } catch (e){}
 };
 
@@ -1364,15 +1364,15 @@ _i3dv_player.prototype.scaler = function () {
 _i3dv_player.prototype.resize = function () {
     if(this.destroyed) return;
     // Change canvas width and height
-    this.viewer.width = 
-    this.viewer.height = this.i.size;
-    this.viewer.style.width = 
-    this.viewer.style.height = this.i.size + "px";
+    this.elem.width = 
+    this.elem.height = this.i.size;
+    this.elem.style.width = 
+    this.elem.style.height = this.i.size + "px";
 
     // Centers the video
     var mTB = Math.floor((this.container.elem.clientHeight - this.i.size)/2);
     var mRL = Math.floor((this.container.elem.clientWidth  - this.i.size)/2);
-    this.viewer.style.margin = mTB + "px " + mRL + "px";
+    this.elem.style.margin = mTB + "px " + mRL + "px";
 }
 
 /**
@@ -1468,7 +1468,7 @@ _i3dv_player.prototype.loadComplete = function () {
     if(this.destroyed) return;
     this.container.fadeOut(this.container.loading);
     this.container.doOverlayTimeouts();
-    this.container.appendChild(this.viewer);
+    this.container.appendChild(this.elem);
     this.doBackground();
     this.render();
 }
@@ -1625,7 +1625,7 @@ _i3dv_videojsPlayer.prototype   = Object.create( _i3dv_videoPlayer.prototype );
 _i3dv_imagePlayer.prototype     = Object.create( _i3dv_player.prototype );
 
 /**
- * This loads the videoplayer. It creates two objects (this.viewer and
+ * This loads the videoplayer. It creates two objects (this.elem and
  * this.video) for seperating the video specific things from the viewer
  * based things.
  *
@@ -1636,23 +1636,23 @@ _i3dv_imagePlayer.prototype     = Object.create( _i3dv_player.prototype );
  */
 _i3dv_videoPlayer.prototype.load = function (){
     if(this.destroyed) return;
-    this.viewer = this.video = document.createElement("video");
-    this.viewer.classList.add("i3dv_video");
+    this.elem = this.video = document.createElement("video");
+    this.elem.classList.add("i3dv_video");
     this.getVideoInfo();
     if(this.v.size !== this.v.last.size){
         this.v.fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/" + this.v.size + "." + this.v.type;
         console.log("fn = " + this.v.fn);
-        this.viewer.src = this.v.fn;
-        this.viewer.setAttribute("preload", "auto");
-        this.viewer.setAttribute("poster",this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg");
-        this.viewer.load();
+        this.elem.src = this.v.fn;
+        this.elem.setAttribute("preload", "auto");
+        this.elem.setAttribute("poster",this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg");
+        this.elem.load();
         var that = this;
         if(BrowserDetect.browser == "Chrome" || BrowserDetect.browser == "Safari" || BrowserDetect.browser == "Opera"){
             this.loadChecker[this.container.elem.id] = setInterval(function (){
                 that.progress.call(that);
             }, 200);
         } else {
-            this.viewer.addEventListener('progress',function(e){
+            this.elem.addEventListener('progress',function(e){
                 that.progress.call(that, e);
             }, false);
         }
@@ -1695,9 +1695,9 @@ _i3dv_canvasPlayer.prototype.load = function (){
     // this.video.width = this.video.style.width = "70px";
     // this.video.height = this.video.style.height = "70px";
     
-    this.viewer = document.createElement("canvas");
-    this.viewer.classList.add("i3dv_video");
-    this.vcontext = this.viewer.getContext("2d");
+    this.elem = document.createElement("canvas");
+    this.elem.classList.add("i3dv_video");
+    this.vcontext = this.elem.getContext("2d");
     this.getVideoInfo();
     if(this.v.size !== this.v.last.size){
         this.v.fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/" + this.v.size + "." + this.v.type;
@@ -1723,18 +1723,18 @@ _i3dv_canvasPlayer.prototype.load = function (){
  * This is the main loading function for the videojs player.
  *
  * This makes a video element and assigns it to a videojs object
- * (in this case this.viewer_videojs). It also sets up the progress
+ * (in this case this.elem_videojs). It also sets up the progress
  * and loading events, as well as setting a loadChecker interval
  * in the cases of Chrome, Safari and Opera...(funnily enough, IE
  * seems to be the only one that calls "progress" reliably);
  */
 _i3dv_videojsPlayer.prototype.load = function (){
     if(this.destroyed) return;
-    this.viewer = this.video = document.createElement("video");
+    this.elem = this.video = document.createElement("video");
     this.getVideoInfo();
     if(this.v.size !== this.v.last.size){
         var that = this;
-        _V_(this.viewer, {
+        _V_(this.elem, {
             "width"     : this.i.dim,
             "height"    : this.i.dim,
             "controls"  : false, 
@@ -1742,33 +1742,33 @@ _i3dv_videojsPlayer.prototype.load = function (){
             "preload"   : "auto",
             "poster"    :  this.options.baseurl + this.options.renderpath + this.options.modelid + "/videos/thumb.jpg"}, 
         function(){
-            that.viewer_videojs = this;
+            that.elem_videojs = this;
             var fn = that.options.baseurl + that.options.renderpath + that.options.modelid + "/videos/" + that.v.size + ".";
             console.log("fn = " + fn + "{mp4/webm}");
-            that.viewer_videojs.src([
+            that.elem_videojs.src([
                 { type: "video/webm", src: fn + "webm" },
                 { type: "video/mp4", src: fn + "mp4" }
             ]);
-            that.viewer_videojs.load();
+            that.elem_videojs.load();
             if(BrowserDetect.browser == "Chrome" || BrowserDetect.browser == "Safari" || BrowserDetect.browser == "Opera"){
                 that.loadChecker[that.container.elem.id] = setInterval(function (){
                     that.progress();
                 }, 200);
             } else {
-                that.viewer_videojs.on("progress", function(e) {
+                that.elem_videojs.on("progress", function(e) {
                     that.progress();
                 });
-                that.viewer_videojs.on("loadedalldata", function(e) {
+                that.elem_videojs.on("loadedalldata", function(e) {
                     that.loadComplete();
                 });
             }
-            that.viewer_videojs.on("error", function(e) {
+            that.elem_videojs.on("error", function(e) {
                 that.error(e);
             });
         });
         this.v.last.size = this.v.size;
     }
-    this.viewer.classList.add("i3dv_video");
+    this.elem.classList.add("i3dv_video");
 }
 
 /**
@@ -1783,8 +1783,8 @@ _i3dv_videojsPlayer.prototype.load = function (){
 _i3dv_imagePlayer.prototype.load = function (){
     if(this.destroyed) return;
     var that = this;
-    this.viewer = document.createElement("div");
-    this.viewer.classList.add("i3dv_video");
+    this.elem = document.createElement("div");
+    this.elem.classList.add("i3dv_video");
     this.getImageInfo();
     if(this.v.size !== this.v.last.size){
         var row = this.i.row;
@@ -1848,7 +1848,7 @@ _i3dv_videoPlayer.prototype.doBackground = function () {
         this.container.thumbcanvas.style.width  = 
         this.container.thumbcanvas.height = 
         this.container.thumbcanvas.width  = 
-        this.viewer.height;
+        this.elem.height;
     this.context = this.container.thumbcanvas.getContext("2d");
     this.context.drawImage(
         this.video,
@@ -1958,7 +1958,7 @@ _i3dv_canvasPlayer.prototype.resize = function (){
  */
 _i3dv_imagePlayer.prototype.resize = function (){
     _i3dv_player.prototype.resize.call(this);
-    this.viewer.style.backgroundSize = "auto " + this.i.size + "px";
+    this.elem.style.backgroundSize = "auto " + this.i.size + "px";
     this.seek(true);
 }
 
@@ -1984,7 +1984,7 @@ _i3dv_videojsPlayer.prototype.seek = function (){
     this.v.time = this.v.frame / this.v.fps;
     if(BrowserDetect.browser == "Explorer") this.v.time += (2/this.v.fps);
     if(this.v.time != this.v.last.time && typeof this.v.time !== "undefined"){
-        this.viewer_videojs.currentTime(this.v.time);
+        this.elem_videojs.currentTime(this.v.time);
         this.v.last.time = this.v.time;
     }
 }
@@ -1996,10 +1996,10 @@ _i3dv_videojsPlayer.prototype.seek = function (){
 _i3dv_imagePlayer.prototype.seek = function (force){
     force = (typeof force === "undefined") ? false : force;
     if(this.i.last.row !== this.i.row || force) {
-        this.viewer.style.backgroundImage = "url('" + (this.imageBuffer[this.i.row].src) + "')";
-        this.viewer.style.backgroundPosition = (-this.i.col * this.i.size) + "px 0";
+        this.elem.style.backgroundImage = "url('" + (this.imageBuffer[this.i.row].src) + "')";
+        this.elem.style.backgroundPosition = (-this.i.col * this.i.size) + "px 0";
     } else if(this.i.last.col !== this.i.col) {
-        this.viewer.style.backgroundPosition = (-this.i.col * this.i.size) + "px 0";
+        this.elem.style.backgroundPosition = (-this.i.col * this.i.size) + "px 0";
     }
 }
 
@@ -2007,7 +2007,7 @@ _i3dv_imagePlayer.prototype.seek = function (force){
  * Puts the video on the canvas and does transparency if need be.
  */
 _i3dv_canvasPlayer.prototype.vToC = function () {
-    this.viewer.getContext("2d").drawImage(this.video,0,0,this.viewer.width,this.viewer.height);
+    this.elem.getContext("2d").drawImage(this.video,0,0,this.elem.width,this.elem.height);
     if(this.options.trans){
         this.trans();
     }
@@ -2021,7 +2021,7 @@ _i3dv_canvasPlayer.prototype.vToC = function () {
  * By default this is set to 100.
  */
 _i3dv_canvasPlayer.prototype.trans = function (){
-    var frame = this.vcontext.getImageData(0,0,this.viewer.width, this.viewer.height);
+    var frame = this.vcontext.getImageData(0,0,this.elem.width, this.elem.height);
     var data = frame.data;
     var l = data.length,
     r = data[0],
@@ -2057,6 +2057,6 @@ _i3dv_imagePlayer.prototype.percent = function (){
 
 _i3dv_videojsPlayer.prototype.percent = function (){
     if(this.destroyed) return;
-    this.i.percentloaded =(this.viewer_videojs.duration()) ? (this.viewer_videojs.buffered().end(0) / this.viewer_videojs.duration())*100 : 0;
+    this.i.percentloaded =(this.elem_videojs.duration()) ? (this.elem_videojs.buffered().end(0) / this.elem_videojs.duration())*100 : 0;
     return this.i.percentloaded;
 }
