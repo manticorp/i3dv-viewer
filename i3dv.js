@@ -440,6 +440,8 @@ var _i3dv_container = function (id, o){
 
 /**
  * Initialises the container. 
+ * 
+ * @param {object} [o] inits the container with these options.
  */
 _i3dv_container.prototype.init = function (o) {
 	if(typeof o !== "undefined"){
@@ -510,6 +512,7 @@ _i3dv_container.prototype.init = function (o) {
     this.load();
     this.doEvents();
     this.checkModel();
+    return this.player;
 }
 
 /**
