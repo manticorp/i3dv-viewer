@@ -54,37 +54,19 @@
                 var prmstr = window.location.search.substr(1);
                 var prmarr = prmstr.replace(/%20/g,"").replace(/\s/g,"").split ("&");
                 
-                /**
-                 * This takes the array, [v], and adds the last item of it to [to]
-                 */
-                var recursiveAdd = function (v, to){
-                    var temp_ob = {};
-                    var prop = v.pop();
-                    if(typeof to === "undefined") {
-                        if(v.length > 0) {
-                            var elem = v.pop();
-                        } else {
-                            return prop;
-                        }
-                        temp_ob[elem] = prop;   
-                    } else  {
-                        temp_ob[prop] = to;
-                    }
-                    if(v.length > 0) return recursiveAdd(v, temp_ob);
-                    return temp_ob;
+                var addToObject = function(ob, vars){
+                    var thePart = vars.shift();
+                	if(vars.length === 1){
+                		ob[thePart] = vars[0];
+                	} else {
+                    	if(typeof ob[thePart] === "undefined"){
+                    		ob[thePart] = {};
+                    	}
+            			ob[thePart] = addToObject(ob[thePart],vars);
+                	}
+            		return ob;
                 }
                 
-                /**
-                 * This takes each get var and splits it by hyphens to indicate
-                 * depth inside the options object, e.g.:
-                 *
-                 *  opts.start.v.x
-                 *
-                 * would be represented by the GET variable:
-                 *
-                 *  start-v-x
-                 *
-                 */
                 for ( var i = 0; i < prmarr.length; i++) {
                     // Splits the get var by the equals
                     var tmparr = prmarr[i].split("=");
@@ -92,12 +74,7 @@
                     var parts = tmparr[0].split("-");
                     // Pushes the right hand side of the equals onto the end of the parts array
                     parts.push(tmparr[1]);
-                    // So the left most property is shifted off...
-                    var thePart = parts.shift();
-                    // and the proper recursively deep option is made...
-                    var theEquals = recursiveAdd(parts);
-                    // which is then added to the opts array.
-                    opts[thePart] = theEquals;
+                    opts = addToObject(opts, parts);
                 }
                 
                 // Initialises the viewer with [opts]
