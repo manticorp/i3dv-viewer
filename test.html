@@ -88,6 +88,16 @@
                     $('.test-containers').remove();
                 });
                 
+                test('Check the data vars.', function(){
+                	expect(3);
+                    var el = $( "<div id='test-container' data-start-v-x=5 data-start-scale=0.8 data-decayfactor=0></div>").appendTo( "body" );
+					var cont = i3dv.init('test-container');
+					ok(cont.options.start.v.x === 5);
+					ok(cont.options.start.scale === 0.8);
+					ok(cont.options.decayfactor === 0);
+                    el.remove();
+                });
+                
                 test('Check the existance of all expected elements.', function(){
                     var el = $( "<div/>", {'id':'i3dv_viewer'}).appendTo( "body" );
                     i3dv.options["playertype"] = "video";
