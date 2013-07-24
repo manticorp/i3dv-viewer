@@ -22,14 +22,14 @@
 		</style>
     </head>
     <body>
-    	<div class="i3dv_viewer"></div>
+    	<div class="i3dv_viewer" data-modelid=tesseract></div>
     	<div class="i3dv_viewer"></div>
     	<div class="i3dv_viewer"></div>
     	<script>
     		var i3dv = new _i3dv_();
     		var containers = i3dv.init(null, false);
     		for(var i = 0, len = containers.length; i < len; i++){
-    			containers[i].init();
+    			containers[i].init({modelid: 'bmw'});
     			console.log(i);
     		}
     	</script>

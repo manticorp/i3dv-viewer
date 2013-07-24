@@ -430,6 +430,10 @@ var _i3dv_container = function (id, o){
         this.active = false;
         // Sets id depending on what id is.
         this.id = (typeof id === "object") ? id : document.getElementById(id);
+
+        // Creates the options variable for the container by cloning the options and
+        // populating the new options with variables from the data tags.
+        this.options = this.checkDataTags(_i3dv_.prototype.clone(this.options), this.id);
         
         // Whether certain things have been done...just for keeping track of certain things.
         // @todo with most of these there is a better way of telling this.
@@ -463,10 +467,6 @@ _i3dv_container.prototype.init = function (o) {
     this.elem.classList.add("i3dv_container");
     this.elem.id = "i3dv_" + Math.floor(Math.random()*1000);
     this.setTabIndex(1);
-    
-    // Creates the options variable for the container by cloning the options and
-    // populating the new options with variables from the data tags.
-    this.options = this.checkDataTags(_i3dv_.prototype.clone(this.options), this.container);
     
     // Saves the original style (not used)
     this.originalstyle = this.elem.style;
