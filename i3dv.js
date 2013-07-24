@@ -7,7 +7,7 @@
  *    `____________'     |_|____/ \__,_| \_/      \_/ |_|\___| \_/\_/ \___|_|   
  *    
  *      
- * The i3dv viewer is Copyright (C) � 2013 by i3dv and their holding company Exponim.
+ * The i3dv viewer is Copyright (C) � 2013 by i3dv
  *
  * @url         http://www.i3dv.com
  * @email       admin (at) i3dv.com
@@ -21,7 +21,7 @@
  *
  * @author      Harry Mustoe-Playfair
  * @author      i3dv
- * @copyright   i3dv and Exponim 2013
+ * @copyright   i3dv 2013
  * @version     0.2
  *
  * @section LICENSE
@@ -252,8 +252,8 @@ _i3dv_.prototype.init = function (id, init){
                 containers.push(this.addContainer(conts));
             }
         } else {
-            for(var i = 0; i < conts.length; i++){
-                containers.push(this.addContainer(conts[i]));
+            for(var q = 0; q < conts.length; q++){
+                containers.push(this.addContainer(conts[q]));
             }
         }
     } else if (typeof id === "object"){
@@ -298,8 +298,8 @@ _i3dv_.prototype.addContainer = function (elem) {
  * @param {_container[]} conts An array of _containers
  */
 _i3dv_.prototype.prep = function (conts){
-    for(var i = 0; i < conts.length; i++){
-        conts[i].init();
+    for(var q = 0; q < conts.length; q++){
+        conts[q].init();
     }
 }
 
@@ -313,8 +313,8 @@ _i3dv_.prototype.prep = function (conts){
 _i3dv_.prototype.cast = function (x, type){
     type = (typeof type == "undefined") ? "b" : type;
     var parts = type.split("|");
-    for(var i = 0; i < parts.length; i++){
-        switch(parts[i][0].toLowerCase()){
+    for(var q = 0; q < parts.length; q++){
+        switch(parts[q][0].toLowerCase()){
             case "f":
             case "n":
                 return parseFloat(x);
@@ -404,13 +404,13 @@ _i3dv_.prototype.checkOptions = function(o, dft, ot) {
 /**
  * Makes an exact copy of o recursively
  */
-_i3dv_.prototype.clone = function(o) {
-    var newObj = (o instanceof Array) ? [] : {};
-    for (i in o) {
-        if (i == 'clone') continue;
-        if (o[i] && typeof o[i] === "object") {
-            newObj[i] = this.clone(o[i]);
-        } else newObj[i] = o[i]
+_i3dv_.prototype.clone = function(obj) {
+    var newObj = (obj instanceof Array) ? [] : {};
+    for (prop in obj) {
+        if (prop == 'clone') continue;
+        if (obj[prop] && typeof obj[prop] === "object") {
+            newObj[prop] = this.clone(obj[prop]);
+        } else newObj[prop] = obj[prop]
     }
     return newObj;
 }
@@ -1789,7 +1789,7 @@ _i3dv_imagePlayer.prototype.load = function (){
     if(this.v.size !== this.v.last.size){
         var row = this.i.row;
         var fn = this.options.baseurl + this.options.renderpath + this.options.modelid + "/sprites/" + this.v.size + "/sprite-";
-        for(var i=0; i < this.options.steps.y; i++){
+        for(var q=0; q < this.options.steps.y; q++){
             this.imageBuffer[row]        = new Image();
             this.imageBuffer[row].src    = fn + row + "." + this.v.type;
             this.imageBuffer[row].id     = this.container.elem.id + "_sprite" + row;
@@ -2027,12 +2027,12 @@ _i3dv_canvasPlayer.prototype.trans = function (){
     r = data[0],
     g = data[1],
     b = data[2];
-    for(var i = 0; i < l; i+=4){
-        diff = Math.abs((data[i] - data[0])) + Math.abs((data[i+1] - data[1])) + Math.abs((data[i+2] - data[2]));
+    for(var q = 0; q < l; q+=4){
+        diff = Math.abs((data[q] - data[0])) + Math.abs((data[q+1] - data[1])) + Math.abs((data[q+2] - data[2]));
         if(diff <= this.options.transtolerance/1.5) {
-            frame.data[i+3] = 0;
+            frame.data[q+3] = 0;
         } else if(diff <= this.options.transtolerance) { 
-            frame.data[i+3] = 255*((diff/this.options.transtolerance));
+            frame.data[q+3] = 255*((diff/this.options.transtolerance));
         }
     }
     this.vcontext.putImageData(frame,0,0);

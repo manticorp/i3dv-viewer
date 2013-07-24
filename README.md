@@ -29,7 +29,7 @@ either use our embedded player or use this hosted solution.
 
 ### Contributing
 
-1. Check for [open issues](https://github.com/Exponim/i3dv-viewer/issues) or open a fresh issue to 
+1. Check for [open issues](https://github.com/manticorp/i3dv-viewer/issues) or open a fresh issue to 
    start a discussion around a feature idea or a bug.
 2. Fork this repository on Github to start making your changes.
 3. Preferably, create a new branch in your cloned repository. If it's related to an issue, then
@@ -43,7 +43,7 @@ update and writing any appropriate tests.
 
 #### Bugs
 
-[Contribute an issue](https://github.com/Exponim/i3dv-viewer/issues)
+[Contribute an issue](https://github.com/manticorp/i3dv-viewer/issues)
 
 A bug is a demonstrable problem that is caused by the code in the 
 repository. Good bug reports are extremely helpful - thank you!
@@ -65,7 +65,7 @@ help people to fix any potential bugs.
 
 ## TODO 
 
-[See TODO](https://github.com/Exponim/i3dv-viewer/blob/master/TODO.md)
+[See TODO](https://github.com/manticorp/i3dv-viewer/blob/master/TODO.md)
 
 ## Browsers Tested
 
@@ -111,9 +111,9 @@ commercial gain. If it is used for commercial gain, payment is required. If
 it is used for charity/personal objectives, payment is not required.
 
 You **can not and must not** use this software for any commercial
-purpose whatsoever without the explicit permission of Exponim and/pr i3dv.
+purpose whatsoever without the explicit permission of i3dv.
 Any commercial use is **absolutely prohibited** unless written permission
-is given by **[Exponim](http://www.exponim.com)** or **[i3dv](http://www.i3dv.com)**.
+is given by **[i3dv](http://www.i3dv.com)**.
 
 Anyone is free to edit, use and redistribute this code (for non commercial purposes)
 so long as an attribution is provided and a link to this GitHub repository or
