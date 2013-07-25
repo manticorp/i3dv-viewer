@@ -5,13 +5,8 @@ renders/*
 <<<<<<< HEAD
 !renders/tesseract/
 !renders/tesseract/STATUS
-=======
-<<<<<<< HEAD
->>>>>>> b23ae28e1c6bbe4c3acbc976c2d58a5a724fecd3
-
 favicon.*
-=======
->>>>>>> 48cd3c23c84f88c10db448606e9d52e86b3ee6d4
+documentationGenerator.bat
 
 # Packages #
 ############
