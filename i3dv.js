@@ -87,7 +87,8 @@ BrowserDetect.init();
  * This class is initiated with several of the options below, all optional, that will take on
  * the default options if not explicitly set.
  *
- * @param {object} [options] the options
+ * @param {object} [options] the options or a class/id string or htmlelements
+ * @param {object/string} [elem] the element, if options have been passed to the constructor
  */
 var _i3dv_ = function (options, elem){
 	
