@@ -416,6 +416,8 @@ _i3dv_.prototype.checkOptions = function(o, dft, ot) {
 
 /**
  * Makes an exact copy of o recursively
+ * 
+ * @param {object} obj
  */
 _i3dv_.prototype.clone = function(obj) {
     var newObj = (obj instanceof Array) ? [] : {};
