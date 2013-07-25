@@ -224,11 +224,11 @@ var _i3dv_ = function (options, elem){
     if(this.options["init"]) this.init();
 
 	if (typeof options == 'string' || options == '[object NodeList]'){
-		this.init(options);
+		return this.init(options);
 	}
 	
 	if(typeof elem !== 'undefined'){
-		this.init(elem);
+		return this.init(elem);
 	}
 };
     
