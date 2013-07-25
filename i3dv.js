@@ -89,9 +89,12 @@ BrowserDetect.init();
  *
  * @param {object} [options] the options
  */
-var _i3dv_ = function (options){
-    this.options = options; // Starts of by setting the options to the user defined options.
-    
+var _i3dv_ = function (options, elem){
+	
+	if(typeof options == 'object' && options !== '[object NodeList]'){
+		this.options = options; // Starts of by setting the options to the user defined options.
+	}
+	
     // These are all the default options.
     // @todo the baseurl will be set to the i3dv CDN once complete...this will mean that
     //  once we're all set up, players will automatically retrieve videos from the CDN. At
@@ -219,6 +222,14 @@ var _i3dv_ = function (options){
     
     // If the options.init == true, this will initiate straight away.
     if(this.options["init"]) this.init();
+
+	if (typeof options == 'string' || options == '[object NodeList]'){
+		this.init(options);
+	}
+	
+	if(typeof elem !== 'undefined'){
+		this.init(elem);
+	}
 };
     
 /**
@@ -235,7 +246,6 @@ var _i3dv_ = function (options){
 _i3dv_.prototype.init = function (id, init){
     id = (typeof id === "undefined" || id === null) ? "i3dv_viewer" : id;
     init = (typeof init === "undefined" || id === null) ? true : init;
-    var containers = [];
     
     if(typeof id === "string"){
         var conts = document.getElementsByClassName(id);
@@ -249,21 +259,27 @@ _i3dv_.prototype.init = function (id, init){
                     return false;
                 }
             } else {
-                containers.push(this.addContainer(conts));
+                this.addContainer(conts);
             }
         } else {
             for(var q = 0; q < conts.length; q++){
-                containers.push(this.addContainer(conts[q]));
+                this.addContainer(conts[q]);
             }
         }
     } else if (typeof id === "object"){
-        containers.push(this.addContainer(id));
+    	if(id == '[object NodeList]'){
+            for(var q = 0; q < id.length; q++){
+                this.addContainer(id[q]);
+            }
+    	} else {
+    		this.addContainer(id);
+    	}
     } else {
         throw new Error("Given element/id not valid.");
     }
     
-    if(containers.length != 0 && typeof this.containers !== "undefined"){
-        if(init) this.prep(containers);
+    if(this.containers.length != 0 && typeof this.containers !== "undefined"){
+        if(init) this.prep(this.containers);
     } else {
         if(id !== "i3dv_viewer"){
             throw new Error("element(s) with id/class " + id + " do not exist"); 
@@ -271,11 +287,7 @@ _i3dv_.prototype.init = function (id, init){
             console.log("Nothing to initialise / no containers found...");
         }
     }
-    if(containers.length === 1){
-        return containers[containers.length-1];
-    } else {
-        return containers;
-    }
+    return this.containers;
 }
 
 
