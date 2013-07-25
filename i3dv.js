@@ -429,6 +429,9 @@ _i3dv_.prototype.clone = function(obj) {
 }
 
 /**
+ * The container Object
+ * 
+ * @class
  * The container object. This contains all functions and properties of the container, 
  * including the player objects.
  *
@@ -800,7 +803,7 @@ _i3dv_container.prototype.error = function (e){
 /**
  * Fades out id (using css classes)
  *
- * @param {DOM Element|string} id - either a DOM element or the id of one.
+ * @param {DOMelement|string} id - either a DOM element or the id of one.
  */
 _i3dv_container.prototype.fadeOut = function (id){
     var elem = (typeof id == "object") ? id : document.getElementById(id);
@@ -817,7 +820,7 @@ _i3dv_container.prototype.fadeOut = function (id){
 /**
  * Hides id (using css classes) - doesn't completely remove.
  *
- * @param {DOM Element|string} id - either a DOM element or the id of one.
+ * @param {DOMelement|string} id - either a DOM element or the id of one.
  */
 _i3dv_container.prototype.hideOut = function (id){
     var elem =(typeof id == "object") ? id : document.getElementById(id);
@@ -831,7 +834,7 @@ _i3dv_container.prototype.hideOut = function (id){
 /**
  * Fades in id (using css classes).
  *
- * @param {DOM Element|string} id - either a DOM element or the id of one.
+ * @param {DOMelement|string} id - either a DOM element or the id of one.
  */
 _i3dv_container.prototype.fadeIn = function (id){
     var elem = (typeof id == "object") ? id : document.getElementById(id);
@@ -867,7 +870,7 @@ _i3dv_container.prototype.appendChild = function(e){
  * are all typecast depending on the expected type.
  *
  * @param {object} o the options to populate
- * @param {DOM element} elem the DOM element from which to extract data tags
+ * @param {DOMelement} elem the DOM element from which to extract data tags
  * @param {String} [parent] only used for recursion.
  */
 _i3dv_container.prototype.checkDataTags = function (o, elem, parent) {
@@ -1140,6 +1143,7 @@ _i3dv_container.prototype.doEvents = function (){
 }
 
 /**
+ * @class
  * The main default player function, on which all player types are based.
  * This sets up some of the common variables and functions.
  *
@@ -1555,8 +1559,11 @@ _i3dv_player.prototype.keypad = function (e){
 }
 
 /**
+ * @class
  * Inherits the default player and gives a v object that stores
  * all sorts of 'video' information.
+ * 
+ * @see _i3dv_player
  */
 _i3dv_videoPlayer = function (o, c) {
     _i3dv_player.call(this, o, c);
@@ -1579,20 +1586,26 @@ _i3dv_videoPlayer = function (o, c) {
 }
 
 /**
+ * @class
  * Inherits the videoPlayer
+ * @see _i3dv_videoPlayer
  */
 _i3dv_videojsPlayer = function (o, c){
     _i3dv_videoPlayer.call(this, o, c);
 }
 
 /**
+ * @class
  * Inherits the videoPlayer
+ * 
+ * @see _i3dv_videoPlayer
  */
 _i3dv_canvasPlayer = function (o, c) {
     _i3dv_videoPlayer.call(this, o, c);
 }
 
 /**
+ * @class
  * Sets up the image player, inheriting the default player.
  *
  * This also creates a v object for holding options, however, not
@@ -1600,6 +1613,7 @@ _i3dv_canvasPlayer = function (o, c) {
  *
  * This also initiates the image buffer array to hold all the
  * background images.
+ * @see _i3dv_player
  */
 _i3dv_imagePlayer = function (o, c) {
     _i3dv_player.call(this, o, c);
